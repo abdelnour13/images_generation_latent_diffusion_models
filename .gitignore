@@ -5,3 +5,4 @@ experiments/**/*.pt
 .ipynb_checkpoints
 .env
 runs
+test.ipynb
