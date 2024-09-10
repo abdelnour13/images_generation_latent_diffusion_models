@@ -2,6 +2,7 @@ data/*/*
 __pycache__
 experiments/**/*.pth
 experiments/**/*.pt
+experiments/**/*.npy
 .ipynb_checkpoints
 .env
 runs

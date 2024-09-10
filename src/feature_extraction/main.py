@@ -1,6 +1,7 @@
 import sys
 import os
 import torch
+import numpy as np
 sys.path.append('../..')
 import definitions as D
 from argparse import ArgumentParser
@@ -44,13 +45,13 @@ def feature_extract(
                 # Forward pass
                 enc_out = model.encoder(data['image'])
                 quant_out = model.quantize(enc_out)
-                latents = quant_out['quant_out'].detach().cpu()
+                latents = quant_out['quant_out'].detach().cpu().numpy()
 
                 for idx,latent in zip(data['id'],latents):
                     idx = idx.long().item()
                     image_id = loader.dataset.splits_df.iloc[idx]['image_id']
                     image_id = os.path.splitext(image_id)[0]
-                    torch.save(latent,os.path.join(save_dir,split,f'{image_id}.pt'))
+                    np.save(os.path.join(save_dir,split,f'{image_id}.npy'),latent)
 
 def main(args: Args):
     
