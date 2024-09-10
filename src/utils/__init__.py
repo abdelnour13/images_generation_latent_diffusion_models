@@ -4,5 +4,6 @@ from .helpers import (
     diaply_random_images,
     display_images,
     load_json,
-    display_image_in_actual_size
+    display_image_in_actual_size,
+    get_last_checkpoint
 )

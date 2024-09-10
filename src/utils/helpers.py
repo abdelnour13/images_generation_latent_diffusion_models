@@ -9,6 +9,21 @@ from tqdm.auto import tqdm
 from PIL import Image
 from typing import Optional
 from imagesize import get
+from collections import OrderedDict
+
+def get_last_checkpoint(checkpoints_dir : str) -> Optional[OrderedDict]:
+
+    checkpoints = os.listdir(checkpoints_dir)
+    checkpoints = [checkpoint for checkpoint in checkpoints if checkpoint.endswith('.pt') or checkpoint.endswith('.pth')]
+    checkpoints = sorted(checkpoints)
+
+    if len(checkpoints) == 0:
+        return None
+
+    last_checkpoint = checkpoints[-1]
+    last_checkpoint = os.path.join(checkpoints_dir, last_checkpoint)
+
+    return torch.load(last_checkpoint)
 
 def seed_everything(seed : int) -> None:
 

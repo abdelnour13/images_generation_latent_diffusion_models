@@ -4,6 +4,12 @@ import shutil
 import pandas as pd
 from sklearn.model_selection import train_test_split
 from definitions import DATA_DIR
+from argparse import ArgumentParser
+from dataclasses import dataclass
+
+@dataclass
+class Args:
+    datasets: list[str]
 
 api = kaggle.KaggleApi()
 
@@ -40,9 +46,30 @@ def download_anime_faces():
 
     df.to_csv(os.path.join(dataset_path, 'splits.csv'), index=False)
 
-def main():
-    download_celeba()
-    download_anime_faces()
+def main(args : Args):
+    
+    datasets = {
+        'celeba': download_celeba,
+        'anime_faces': download_anime_faces
+    }
+
+    for dataset in args.datasets:
+
+        download_fn = datasets.get(dataset)
+        
+        if download_fn is not None:
+            download_fn()
+        else:
+            print(f"Dataset {dataset} not found")
 
 if __name__ == '__main__':
-    main()
+
+    parser = ArgumentParser()
+
+    parser.add_argument('--datasets', action='datasets to download', nargs='+', default=['celeba', 'anime_faces'])
+
+    args = parser.parse_args()
+
+    args = Args(**vars(args))
+
+    main(args)

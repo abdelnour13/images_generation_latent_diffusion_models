@@ -147,7 +147,7 @@ def create_loaders(config : Config) -> tuple[DataLoader,DataLoader,DataLoader]:
 
     return train_loader,val_loader,test_loader
 
-def create_models(config : Config) -> tuple[nn.Module,nn.Module,nn.Module]:
+def create_models(config : Config) -> tuple[VQVAE,Discriminator,LPIPS]:
 
     vqvae = VQVAE(**config.vqvae_args)
     discriminator = Discriminator(**config.discriminator_args)
