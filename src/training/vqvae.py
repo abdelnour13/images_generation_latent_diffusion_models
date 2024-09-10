@@ -32,7 +32,7 @@ class Config:
     ### *** Reproducibility *** ###
     seed : int = 42
 
-    ### *** Data *** ###
+    ### *** Device *** ###
     device : str = 'cuda'
 
     ### *** Models *** ###
