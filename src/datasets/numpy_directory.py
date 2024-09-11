@@ -44,7 +44,8 @@ class NumpyDirectory(Dataset):
         path = os.path.join(self.root, file)
         data = np.load(path)
 
-        if self.transform:
+        if self.transform is not None:
+            print('Transforming data')
             data = self.transform(data)
 
         return {

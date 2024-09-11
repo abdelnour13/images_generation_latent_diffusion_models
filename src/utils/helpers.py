@@ -5,11 +5,13 @@ import pandas as pd
 import os
 import matplotlib.pyplot as plt
 import json
+from torch import Tensor
 from tqdm.auto import tqdm
 from PIL import Image
 from typing import Optional
 from imagesize import get
 from collections import OrderedDict
+from torch.nn import functional as F
 
 def get_last_checkpoint(checkpoints_dir : str) -> Optional[OrderedDict]:
 
@@ -101,27 +103,31 @@ def load_json(path : str) -> dict:
 
     with open(path, 'r') as file:
         return json.load(file)
+
+def make_grid(
+    images : Tensor,
+    h : int,
+    w : int,
+    gap : int = 4,
+    gap_value : int | float = 255,
+) -> Tensor:
     
-def display_image_in_actual_size(
-    image : np.ndarray,
-    ax : Optional[plt.Axes] = None,
-) -> plt.Axes:
+    B,C,H,W = images.shape[-4:]
+    rest = images.shape[:-4]
+    S = len(rest)
+    
+    if w * h < B:
+        images = images[:w*h,]
+    elif w * h > B:
+        padding = torch.zeros(*rest,w*h - B,C,H,W)
+        images = torch.cat([images,padding],dim=-4)
 
-    dpi = 80
-    height, width, depth = image.shape
-    ax = ax or plt.gca()
+    images = images.reshape(np.prod(rest).astype(int) * B,C,H,W) # (B,C,H,W)
+    images = F.pad(images,(gap,gap,gap,gap),value=gap_value)  # (B,C,H,W)
+    images = images.reshape(*rest,B,*images.shape[1:]) # (...,B,C,H,W)
+    images = images.permute(*range(S),S,S+2,S+3,S+1) # (...,B,H,W,C)
+    images = images.reshape(*rest,h,w,*images.shape[-3:]) # (...,G_h,G_w,H,W,C)
+    images = images.permute(*range(S),S,S+2,S+1,S+3,S+4) # (...,G_h,H,G_w,W,C)
+    images = images.flatten(S,S+1).flatten(S+1,S+2) # (...,H,W,C)
 
-    # What size does the figure need to be in inches to fit the image?
-    figsize = width / float(dpi), height / float(dpi)
-
-    # Create a figure of the right size with one axes that takes up the full figure
-    fig = plt.figure(figsize=figsize)
-    ax = fig.add_axes([0, 0, 1, 1])
-
-    # Hide spines, ticks, etc.
-    ax.axis('off')
-
-    # Display the image.
-    ax.imshow(image)
-
-    return ax
+    return images

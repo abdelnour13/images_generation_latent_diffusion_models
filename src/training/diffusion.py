@@ -209,8 +209,8 @@ def train(
                         ### *** Log to Tensorboard *** ###
                         writer.add_scalar(f'loss',loss.item(),iteration)
 
-                ### *** Update history *** ###
-                history['loss'][-1] += loss.item() / len(loader)
+                    ### *** Update history *** ###
+                    history['loss'][-1] += loss.item() / len(loader)
 
             msg = f'Epoch {epoch+1}/{epochs} [{phase}] Loss: {history["loss"][-1]:.4f}'
 

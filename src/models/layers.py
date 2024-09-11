@@ -224,6 +224,7 @@ class MidBlock(nn.Module):
             stride = 1,
             padding = 1,
         )
+        # t_emb_dim = t_emb_dim,
 
     def forward(self,
         x : Tensor,

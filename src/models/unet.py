@@ -110,6 +110,8 @@ class UNet(nn.Module):
         x = self.silu(x)
         x = self.conv_out(x)
 
-        x = self.activations[self.output_activation](x)
+        activation = self.activations[self.output_activation]
+
+        x = activation(x)
 
         return x
