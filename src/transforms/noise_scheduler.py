@@ -78,7 +78,7 @@ class NoiseScheduler(nn.Module):
         alphas = self.get_buffer('alphas')[t].reshape(B,1,1,1)
 
         x0 = (noised - (sqrt_one_minus_alpha_cumprod * noise)) / sqrt_alpha_cumprod
-        x0 = torch.clamp(x0,-1,1)
+        # x0 = torch.clamp(x0,-1,1)
 
         mean = noised - ((betas * noise) / sqrt_one_minus_alpha_cumprod)
         mean = mean / torch.sqrt(alphas)
