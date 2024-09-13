@@ -29,7 +29,11 @@ class NoiseScheduler(nn.Module):
         self.register_buffer('sqrt_alpha_cumprod', sqrt_alpha_cumprod)
         self.register_buffer('sqrt_one_minus_alpha_cumprod', sqrt_one_minus_alpha_cumprod)
 
-    def forward(self, image : Tensor, t : Optional[Tensor] = None) -> tuple[Tensor,Tensor,Tensor]:
+    def forward(self, 
+        image : Tensor, 
+        t : Optional[Tensor] = None,
+        noise : Optional[Tensor] = None
+    ) -> tuple[Tensor,Tensor,Tensor]:
 
         batch_mode = True
 
@@ -41,13 +45,16 @@ class NoiseScheduler(nn.Module):
             if t is not None:
                 t = t.unsqueeze(0)
 
+            if noise is not None:
+                noise = noise.unsqueeze(0)
+
         B,C,H,W = image.shape
 
         if t is not None and (t.min() < 0 or t.max() >= self.timesteps):
             raise ValueError(f"t must be None or in the range [0, {self.timesteps})")
 
         t = torch.randint(0, self.timesteps, (B,), device=image.device) if t is None else t
-        noise = torch.randn_like(image).to(image.device)
+        noise = torch.randn_like(image).to(image.device) if noise is None else noise
 
         sqrt_alpha_cumprod = self.get_buffer('sqrt_alpha_cumprod')[t].reshape(B,1,1,1)
         sqrt_one_minus_alpha_cumprod = self.get_buffer('sqrt_one_minus_alpha_cumprod')[t].reshape(B,1,1,1)

@@ -62,7 +62,6 @@ class Config:
     ### *** GIF Generation *** ###
     save_image_every : int = 1000
     grid_size : int = 4
-    max_frames : int = 50
 
     ### *** Dataset *** ###
     dataset : str = next(iter(D.DATASETS.keys()))

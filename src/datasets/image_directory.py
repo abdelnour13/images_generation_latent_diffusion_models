@@ -34,7 +34,7 @@ class ImageDirectory(Dataset):
         if self.dataset not in DATASETS:
             raise ValueError(f"Dataset {self.dataset} not available")
         
-        if self.split not in ['train', 'val', 'test']:
+        if self.split is not None and self.split not in ['train', 'val', 'test']:
             raise ValueError(f"Split must be one of ['train', 'val', 'test']")
         
     def __len__(self) -> int:
