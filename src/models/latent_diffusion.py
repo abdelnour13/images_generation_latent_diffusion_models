@@ -40,12 +40,16 @@ class LatentDiffusion(nn.Module):
         self.unet = UNet(config.unet)
         self.noise_scheduler = NoiseScheduler(config.noise_scheduler)
 
+        if config.input_type == 'latent':
+            self.vqvae.encoder = nn.Identity()
+
     def forward(self, x : Tensor) -> tuple[Tensor,Tensor,Tensor]:
         
         if self.config.input_type == 'image':
             with torch.inference_mode():
                 x = self.vqvae.encoder(x)
                 x = self.vqvae.quantize(x)
+                x = x['quant_out']
 
         noised_x,noise,t = self.noise_scheduler(x)
         predicted_noise = self.unet(noised_x,t)
@@ -91,7 +95,7 @@ class LatentDiffusion(nn.Module):
             if device is not None:
                 x = x.to(device)
 
-        decoded = torch.stack(decoded)
+        decoded = torch.stack(decoded) if len(decoded) > 0 else x.unsqueeze(0)
 
         ### Post Processing ###
         match self.config.vqvae.output_activation:

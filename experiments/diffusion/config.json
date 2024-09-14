@@ -31,16 +31,23 @@
             "timesteps" : 1000,
             "beta_start" : 0.0015,
             "beta_end" : 0.0195
-        }
+        },
+        "input_type" : "latent"
     },
+
+    "vqvae_exp" : "vqvae",
 
     "batch_size" : 16,
     "learning_rate" : 1e-4,
-    "total_epochs" : 100,
+    "total_epochs" : 150,
 
     "num_workers" : 4,
     "prefetch_factor" : 2,
 
-    "dataset" : "anime_faces"
+    "dataset" : "anime_faces",
+
+    "grid_size" : 4,
+    "save_image_every" : 2000,
+    "noise_size" : [16,16]
 
 }

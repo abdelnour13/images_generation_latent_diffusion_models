@@ -12,13 +12,12 @@ sys.path.append('../..')
 import definitions as D
 from src.utils import seed_everything, load_json, make_grid, get_last_checkpoint
 from dataclasses import dataclass, field
-from src.datasets import ImageDirectory
+from src.datasets import ImageDirectory,NumpyDirectory
 from torch.utils.data import DataLoader
 from torchvision.transforms import v2 as T
-from src.transforms import NoiseScheduler
-from src.models import UNetConfig,VQVAEConfig,LatentDiffusion,LatentDiffusionConfig
+from src.models import LatentDiffusion,LatentDiffusionConfig
 from tqdm.auto import tqdm
-from torch.utils.tensorboard import SummaryWriter
+from torch.utils.tensorboard import SummaryWriter   
 
 @dataclass
 class Config:
@@ -62,34 +61,32 @@ class Config:
 class Args:
     experiment : str
 
+def create_dataset(config: Config,split : str) -> ImageDirectory:
+
+    if config.model_config.input_type == 'image':
+        dataset = ImageDirectory(
+            dataset = config.dataset,
+            transform = T.Compose([
+                T.ToImage(),
+                T.ToDtype(dtype=torch.float32,scale=True),
+                T.Normalize(mean=[0.5,0.5,0.5],std=[0.5,0.5,0.5]),
+            ]),
+            split = split,
+        )
+    else:
+        dataset = NumpyDirectory(
+            root = os.path.join(D.DATASETS[config.dataset].root, "features"),
+            transform = T.ToDtype(dtype=torch.float32,scale=False),
+            split = split,
+        )
+
+    return dataset
+
 def create_datasets(config: Config) -> tuple[ImageDirectory,ImageDirectory,ImageDirectory]:
 
-    train_data = ImageDirectory(
-        dataset = config.dataset,
-        transform = T.Compose([
-            T.ToDtype(dtype=torch.float32,scale=True),
-            T.Normalize(mean=[0.5,0.5,0.5],std=[0.5,0.5,0.5]),
-        ]),
-        split = 'train',
-    )
-
-    val_data = ImageDirectory(
-        dataset = config.dataset,
-        transform = T.Compose([
-            T.ToDtype(dtype=torch.float32,scale=True),
-            T.Normalize(mean=[0.5,0.5,0.5],std=[0.5,0.5,0.5]),
-        ]),
-        split = 'val',
-    )
-
-    test_data = ImageDirectory(
-        dataset = config.dataset,
-        transform = T.Compose([
-            T.ToDtype(dtype=torch.float32,scale=True),
-            T.Normalize(mean=[0.5,0.5,0.5],std=[0.5,0.5,0.5]),
-        ]),
-        split = 'test',
-    )
+    train_data = create_dataset(config,'train')
+    val_data = create_dataset(config,'val')
+    test_data = create_dataset(config,'test')
 
     return train_data,val_data,test_data
 
@@ -126,11 +123,11 @@ def create_dataloaders(config : Config) -> tuple[DataLoader,DataLoader,DataLoade
 
 def create_model(config: Config) -> LatentDiffusion:
 
-    model =  LatentDiffusion(config.model_config)
+    model =  LatentDiffusion(config.model_config).to(config.device)
 
     checkpoints_dir = os.path.join(D.EXPERIMENTS_DIR,config.vqvae_exp,'checkpoints')
-    checkpoints = get_last_checkpoint(checkpoints_dir)['vqvae']
-    model.vqvae.load_state_dict(torch.load(checkpoints))
+    checkpoint = get_last_checkpoint(checkpoints_dir)['vqvae']
+    model.vqvae.load_state_dict(checkpoint,strict=False)
     
     return model
 
@@ -165,6 +162,8 @@ def train(
     images = []
 
     model = model.to(config.device)
+
+    data_key = config.model_config.input_type
     
     for epoch in range(config.total_epochs):
 
@@ -190,12 +189,12 @@ def train(
                     optimizer.zero_grad()
 
                 ### *** Move data to device *** ###
-                data['latent'] = data['latent'].to(config.device)
+                data[data_key] = data[data_key].to(config.device)
 
                 with torch.set_grad_enabled(training):
                     
                     ### *** Forward pass *** ###
-                    y_hat,y,t = model.forward(data['latent'])
+                    y_hat,y,t = model.forward(data[data_key])
 
                     ### *** Calculate loss *** ###
                     loss = loss_fn(y_hat,y)
@@ -215,12 +214,12 @@ def train(
 
                             model.eval()
 
-                            fake_images,_ = model.generate(gif_noise)
+                            fake_images,_ = model.generate(gif_noise,progress=False)
                             fake_images = fake_images.detach().cpu()
 
                             model.train()
                             
-                            writer.add_images('Generated Images',fake_images,iteration)
+                            writer.add_images('Generated Images',fake_images,iteration // config.save_image_every)
 
                             fake_images = make_grid(fake_images,h=config.grid_size,w=config.grid_size,gap=4,gap_value=1.0) \
                                 .mul(255) \
@@ -244,7 +243,7 @@ def train(
 def main(args: Args) -> None:
 
     ### *** Logger *** ###
-    logger = Logger(name="Train VQVAE",level=logging.INFO)
+    logger = Logger(name="Main",level=logging.INFO)
 
     ### ***** Load Config ***** ###
     logger.info(f'Loading Config for Experiment {args.experiment}')
@@ -281,13 +280,12 @@ def main(args: Args) -> None:
     logger.info('Starting Training')
 
     history,images = train(
+        config = config,
         model = model,
         train_loader = train_dataloader,
         val_loader = val_dataloader,
         loss_fn = loss_fn,
         optimizer = optimizer,
-        epochs = config.total_epochs,
-        device = config.device
     )
 
     logger.info('Training Complete')
