@@ -1,6 +1,6 @@
 ## Images Generation with Latent Diffusion models
 
-This repository contains the code for generating images with the Latent Diffusion models, as described in the paper [Latent Diffusions for Generative Modeling](https://arxiv.org/abs/2106.06759),tested on [Anime Faces dataset](https://www.kaggle.com/datasets/soumikrakshit/anime-faces).
+This repository contains the code for generating images with the Latent Diffusion models, as described in the paper [Latent Diffusions for Generative Modeling](https://arxiv.org/abs/2006.11239),tested on [Anime Faces dataset](https://www.kaggle.com/datasets/soumikrakshit/anime-faces).
 
 ## VQVAE Training results
 
@@ -41,14 +41,14 @@ python3 create.py [-h] [--on-exists {error,overwrite}] --name NAME --type {vqvae
 
 ## Train a model
 
-- To train a VQVAE
+- To train the VQVAE
 
 ```
 cd src/training
 python3 vqvae.py --experiment EXPERIMENT
 ```
 
-- To train a Latent diffusion model
+- To train the Latent diffusion model
 
 ```
 cd src/training
