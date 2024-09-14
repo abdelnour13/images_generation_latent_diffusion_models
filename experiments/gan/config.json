@@ -21,7 +21,6 @@
     "batch_size" : 32,
     "learning_rate" : 1e-4,
     "total_epochs" : 100,
-    "noise_size" : [4,4],
     "loss_fn" : "bce",
 
     "num_workers" : 4,

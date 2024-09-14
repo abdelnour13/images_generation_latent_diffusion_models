@@ -36,7 +36,6 @@ class Config:
     batch_size : int = 16
     learning_rate : float = 1e-4
     total_epochs : int = 100
-    noise_size : tuple[int] = field(default_factory=lambda: (16,16))
     loss_fn : str = 'mse'
     smooth : float = 0.1
 

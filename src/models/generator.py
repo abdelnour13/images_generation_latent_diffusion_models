@@ -1,7 +1,6 @@
+import torch
 from torch import nn, Tensor
-from .layers import UpSampleBlock
 from dataclasses import dataclass,field
-from typing import Optional
 
 @dataclass
 class GeneratorConfig:
@@ -37,15 +36,7 @@ class Generator(nn.Module):
         self.activations = nn.ModuleDict({
             'sigmoid' : nn.Sigmoid(),
             'tanh' : nn.Tanh(),
-            'linear' : nn.Identity(),
         })
-
-        # self.apply(self._init)
-
-    def _init(self, module : nn.Module) -> None:
-
-        if isinstance(module, nn.ConvTranspose2d):
-            nn.init.normal_(module.weight, 0.0, 0.02)
 
     def forward(self, x: Tensor) -> Tensor:
 
@@ -55,5 +46,17 @@ class Generator(nn.Module):
 
         activation = self.activations[self.config.output_activation]
         x = activation(x)
+
+        return x
+    
+    def generate(self,x : Tensor) -> Tensor:
+
+        assert not self.training, 'generate should be called in eval mode'
+
+        with torch.inference_mode():
+            x = self.forward(x)
+
+        if self.config.output_activation == 'tanh':
+            x = (x + 1) / 2
 
         return x
