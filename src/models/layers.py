@@ -224,7 +224,7 @@ class MidBlock(nn.Module):
             stride = 1,
             padding = 1,
         )
-        # t_emb_dim = t_emb_dim,
+        # t_emb_dim = t_emb_dim, TODO: add t_emb_dim to resnet_last
 
     def forward(self,
         x : Tensor,

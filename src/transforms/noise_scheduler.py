@@ -2,19 +2,24 @@ import torch
 from torch import nn
 from typing import Optional
 from torch import Tensor
+from dataclasses import dataclass
+
+@dataclass
+class NoiseSchedulerConfig:
+    timesteps : int = 1000
+    beta_start : float = 0.0015
+    beta_end : float = 0.0195
 
 class NoiseScheduler(nn.Module):
 
-    def __init__(self,
-        timesteps : int,
-        beta_start : float,
-        beta_end : float,
-    ) -> None:
+    def __init__(self,config : NoiseSchedulerConfig) -> None:
         super(NoiseScheduler, self).__init__()
 
-        self.timesteps = timesteps
-        self.beta_start = beta_start
-        self.beta_end = beta_end
+        self.config = config
+
+        timesteps = config.timesteps
+        beta_start = config.beta_start
+        beta_end = config.beta_end
 
         betas = torch.linspace(beta_start ** 0.5, beta_end ** 0.5, timesteps) ** 2
         alphas = 1.0 - betas
@@ -50,10 +55,10 @@ class NoiseScheduler(nn.Module):
 
         B,C,H,W = image.shape
 
-        if t is not None and (t.min() < 0 or t.max() >= self.timesteps):
-            raise ValueError(f"t must be None or in the range [0, {self.timesteps})")
+        if t is not None and (t.min() < 0 or t.max() >= self.config.timesteps):
+            raise ValueError(f"t must be None or in the range [0, {self.config.timesteps})")
 
-        t = torch.randint(0, self.timesteps, (B,), device=image.device) if t is None else t
+        t = torch.randint(0, self.config.timesteps, (B,), device=image.device) if t is None else t
         noise = torch.randn_like(image).to(image.device) if noise is None else noise
 
         sqrt_alpha_cumprod = self.get_buffer('sqrt_alpha_cumprod')[t].reshape(B,1,1,1)

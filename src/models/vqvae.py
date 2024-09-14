@@ -1,82 +1,92 @@
 import torch
 from torch import nn,Tensor
 from .layers import DownSampleBlock,MidBlock,UpSampleBlock
+from dataclasses import dataclass
+
+@dataclass
+class VQVAEConfig:
+    in_channels : int
+    down_channels : list[int]
+    mid_channels : list[int]
+    num_layers : int
+    norm_channels : int
+    z_dim : int
+    codebook_size : int
+    num_heads : int
+    output_activation : str = 'tanh'
 
 class VQVAE(nn.Module):
 
-    def __init__(self,
-        in_channels : int,
-        down_channels : list[int],
-        mid_channels : list[int],
-        num_layers : int,
-        norm_channels : int,
-        z_dim : int,
-        codebook_size : int,
-        num_heads : int,
-    ) -> None:
+    def __init__(self,config : VQVAEConfig) -> None:
         super().__init__()
 
-        self.embedding = nn.Embedding(num_embeddings = codebook_size,embedding_dim = z_dim)
+        self.embedding = nn.Embedding(num_embeddings = config.codebook_size,embedding_dim = config.z_dim)
 
         self.encoder = nn.Sequential(
-            nn.Conv2d(in_channels=in_channels,out_channels=down_channels[0],kernel_size=3,padding=1),
+            nn.Conv2d(in_channels=config.in_channels,out_channels=config.down_channels[0],kernel_size=3,padding=1),
             *
             [
                 DownSampleBlock(
-                    in_channels = down_channels[i],
-                    out_channels = down_channels[i+1],
+                    in_channels = config.down_channels[i],
+                    out_channels = config.down_channels[i+1],
                     downsample = True,
-                    num_layers = num_layers,
-                    norm_channels = norm_channels,
+                    num_layers = config.num_layers,
+                    norm_channels = config.norm_channels,
                 )
-                for i in range(len(down_channels)-1)
+                for i in range(len(config.down_channels)-1)
             ],
             *
             [
                 MidBlock(
-                    in_channels = mid_channels[i],
-                    out_channels = mid_channels[i+1],
-                    num_layers = num_layers,
-                    norm_channels = norm_channels,
-                    num_heads = num_heads,
+                    in_channels = config.mid_channels[i],
+                    out_channels = config.mid_channels[i+1],
+                    num_layers = config.num_layers,
+                    norm_channels = config.norm_channels,
+                    num_heads = config.num_heads,
                 )
-                for i in range(len(mid_channels)-1)
+                for i in range(len(config.mid_channels)-1)
             ],
-            nn.GroupNorm(num_groups=norm_channels,num_channels=down_channels[-1]),
+            nn.GroupNorm(num_groups=config.norm_channels,num_channels=config.down_channels[-1]),
             nn.SiLU(),
-            nn.Conv2d(in_channels=down_channels[-1],out_channels=z_dim,kernel_size=3,padding=1),
-            nn.Conv2d(in_channels=z_dim,out_channels=z_dim,kernel_size=1),
+            nn.Conv2d(in_channels=config.down_channels[-1],out_channels=config.z_dim,kernel_size=3,padding=1),
+            nn.Conv2d(in_channels=config.z_dim,out_channels=config.z_dim,kernel_size=1),
         )
 
+        self.activations = {
+            'tanh' : nn.Tanh(),
+            'sigmoid' : nn.Sigmoid(),
+            'linear' : nn.Identity(),
+        }
+
         self.decoder = nn.Sequential(
-            nn.Conv2d(in_channels=z_dim,out_channels=z_dim,kernel_size=1),
-            nn.Conv2d(in_channels=z_dim,out_channels=mid_channels[-1],kernel_size=3,padding=1),
+            nn.Conv2d(in_channels=config.z_dim,out_channels=config.z_dim,kernel_size=1),
+            nn.Conv2d(in_channels=config.z_dim,out_channels=config.mid_channels[-1],kernel_size=3,padding=1),
             *
             [
                 MidBlock(
-                    in_channels = mid_channels[i],
-                    out_channels = mid_channels[i-1],
-                    num_layers = num_layers,
-                    norm_channels = norm_channels,
-                    num_heads = num_heads,
+                    in_channels = config.mid_channels[i],
+                    out_channels = config.mid_channels[i-1],
+                    num_layers = config.num_layers,
+                    norm_channels = config.norm_channels,
+                    num_heads = config.num_heads,
                 )
-                for i in reversed(range(1,len(mid_channels)))
+                for i in reversed(range(1,len(config.mid_channels)))
             ],
             *
             [
                 UpSampleBlock(
-                    in_channels = down_channels[i],
-                    out_channels = down_channels[i-1],
+                    in_channels = config.down_channels[i],
+                    out_channels = config.down_channels[i-1],
                     upsample = True,
-                    num_layers = num_layers,
-                    norm_channels = norm_channels,
+                    num_layers = config.num_layers,
+                    norm_channels = config.norm_channels,
                 )
-                for i in reversed(range(1,len(down_channels)))
+                for i in reversed(range(1,len(config.down_channels)))
             ],
-            nn.GroupNorm(num_groups=norm_channels,num_channels=down_channels[0]),
+            nn.GroupNorm(num_groups=config.norm_channels,num_channels=config.down_channels[0]),
             nn.SiLU(),
-            nn.Conv2d(in_channels=down_channels[0],out_channels=in_channels,kernel_size=3,padding=1),
-            nn.Tanh(),
+            nn.Conv2d(in_channels=config.down_channels[0],out_channels=config.in_channels,kernel_size=3,padding=1),
+            self.activations[config.output_activation],
         )
 
     def quantize(self,x : Tensor) -> dict:

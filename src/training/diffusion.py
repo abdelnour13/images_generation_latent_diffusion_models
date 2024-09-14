@@ -3,18 +3,20 @@ import sys
 import pandas as pd
 import logging
 import os
+import numpy as np
 from logging import Logger
 from torch import nn, optim
 from argparse import ArgumentParser
+import imageio
 sys.path.append('../..')
 import definitions as D
-from src.utils import seed_everything, load_json
+from src.utils import seed_everything, load_json, make_grid, get_last_checkpoint
 from dataclasses import dataclass, field
-from src.datasets import NumpyDirectory
+from src.datasets import ImageDirectory
 from torch.utils.data import DataLoader
 from torchvision.transforms import v2 as T
 from src.transforms import NoiseScheduler
-from src.models import UNet
+from src.models import UNetConfig,VQVAEConfig,LatentDiffusion,LatentDiffusionConfig
 from tqdm.auto import tqdm
 from torch.utils.tensorboard import SummaryWriter
 
@@ -28,15 +30,8 @@ class Config:
     device : str = "cuda" if torch.cuda.is_available() else "cpu"
 
     ### *** Architecture *** ###
-    in_channels : int = 3
-    out_channels : int = 32
-    down_channels : list[int] = field(default_factory=lambda:[64,96,128,192])
-    mid_channels : list[int] = field(default_factory=lambda:[192,128])
-    num_layers : int = 2
-    norm_channels : int = 32
-    num_heads : int = 8
-    t_emb_dim : int = 512
-    output_activation : str = 'linear'
+    model_config : LatentDiffusionConfig = field(default_factory=LatentDiffusionConfig)
+    vqvae_exp : str = 'vqvae'
 
     ### *** Training *** ###
     batch_size : int = 16
@@ -51,31 +46,48 @@ class Config:
     prefetch_factor : int = 2
 
     ### *** Data Directory *** ###
-    data_dir : str = ''
+    dataset : str = next(iter(D.DATASETS.keys()))
+
+    ### *** GIF Generation *** ###
+    grid_size : int = 4
+    save_image_every : int = 1000
+    noise_size : tuple[int,int] = (16,16)
+
+    def __post_init__(self):
+
+        if isinstance(self.model_config,dict):
+            self.model_config = LatentDiffusionConfig(**self.model_config)
 
 @dataclass
 class Args:
     experiment : str
 
-def create_datasets(config: Config) -> tuple[NumpyDirectory,NumpyDirectory,NumpyDirectory]:
+def create_datasets(config: Config) -> tuple[ImageDirectory,ImageDirectory,ImageDirectory]:
 
-    data_dir = os.path.join(D.EXPERIMENTS_DIR,config.data_dir,'features')
-
-    train_data = NumpyDirectory(
-        root = data_dir,
-        transform = T.ToDtype(dtype=torch.float32,scale=False),
+    train_data = ImageDirectory(
+        dataset = config.dataset,
+        transform = T.Compose([
+            T.ToDtype(dtype=torch.float32,scale=True),
+            T.Normalize(mean=[0.5,0.5,0.5],std=[0.5,0.5,0.5]),
+        ]),
         split = 'train',
     )
 
-    val_data = NumpyDirectory(
-        root = data_dir,
-        transform = T.ToDtype(dtype=torch.float32,scale=False),
+    val_data = ImageDirectory(
+        dataset = config.dataset,
+        transform = T.Compose([
+            T.ToDtype(dtype=torch.float32,scale=True),
+            T.Normalize(mean=[0.5,0.5,0.5],std=[0.5,0.5,0.5]),
+        ]),
         split = 'val',
     )
 
-    test_data = NumpyDirectory(
-        root = data_dir,
-        transform = T.ToDtype(dtype=torch.float32,scale=False),
+    test_data = ImageDirectory(
+        dataset = config.dataset,
+        transform = T.Compose([
+            T.ToDtype(dtype=torch.float32,scale=True),
+            T.Normalize(mean=[0.5,0.5,0.5],std=[0.5,0.5,0.5]),
+        ]),
         split = 'test',
     )
 
@@ -111,39 +123,27 @@ def create_dataloaders(config : Config) -> tuple[DataLoader,DataLoader,DataLoade
 
     return train_loader,val_loader,test_loader
 
-def create_scheduler(config: Config) -> NoiseScheduler:
 
-    return NoiseScheduler(
-        timesteps = config.timesteps,
-        beta_start = config.beta_start,
-        beta_end = config.beta_end,
-    ).to(config.device)
+def create_model(config: Config) -> LatentDiffusion:
 
-def create_model(config: Config) -> UNet:
+    model =  LatentDiffusion(config.model_config)
 
-    return UNet(
-        in_channels = config.in_channels,
-        out_channels = config.out_channels,
-        down_channels = config.down_channels,
-        mid_channels = config.mid_channels,
-        num_layers = config.num_layers,
-        norm_channels = config.norm_channels,
-        num_heads = config.num_heads,
-        t_emb_dim = config.t_emb_dim,
-        output_activation = config.output_activation,
-    ).to(config.device)
+    checkpoints_dir = os.path.join(D.EXPERIMENTS_DIR,config.vqvae_exp,'checkpoints')
+    checkpoints = get_last_checkpoint(checkpoints_dir)['vqvae']
+    model.vqvae.load_state_dict(torch.load(checkpoints))
+    
+    return model
 
 
 def train(
-    model : UNet,
+    config : Config,
+    *,
+    model : LatentDiffusion,
     train_loader : DataLoader,
     val_loader : DataLoader,
-    scheduler : NoiseScheduler,
     loss_fn : nn.Module,
     optimizer : optim.Optimizer,
-    epochs : int,
-    device : str
-) -> pd.DataFrame:
+) -> tuple[pd.DataFrame,list[np.ndarray]]:
     
     writer = SummaryWriter()
     
@@ -153,19 +153,27 @@ def train(
         'loss' : [],
     }
 
-    iteration = 0.0
+    iteration = 0
 
-    model = model.to(device)
-    scheduler = scheduler.to(device)
+    gif_noise = torch.randn(
+        config.grid_size**2,
+        config.model_config.vqvae.z_dim,
+        *config.noise_size,
+        device=config.device
+    )
+
+    images = []
+
+    model = model.to(config.device)
     
-    for epoch in range(epochs):
+    for epoch in range(config.total_epochs):
 
         for phase in ['train','val']:
 
             training = phase == 'train'
 
             loader = train_loader if training else val_loader
-            iterator = tqdm(loader,desc=f'Epoch {epoch+1}/{epochs} [{phase}]')
+            iterator = tqdm(loader,desc=f'Epoch {epoch+1}/{config.total_epochs} [{phase}]')
 
             ### *** Set model mode *** ###
             model.train(training)
@@ -182,18 +190,15 @@ def train(
                     optimizer.zero_grad()
 
                 ### *** Move data to device *** ###
-                data['latent'] = data['latent'].to(device)
-
-                ### *** Noising step *** ###
-                noised,noise,t = scheduler(data['latent'])
+                data['latent'] = data['latent'].to(config.device)
 
                 with torch.set_grad_enabled(training):
                     
                     ### *** Forward pass *** ###
-                    output = model(noised,t)
+                    y_hat,y,t = model.forward(data['latent'])
 
                     ### *** Calculate loss *** ###
-                    loss = loss_fn(output,noise)
+                    loss = loss_fn(y_hat,y)
 
                     if training:
 
@@ -203,20 +208,38 @@ def train(
                         ### *** Update weights *** ###
                         optimizer.step()
 
+                        ### *** Log to Tensorboard *** ###
+                        writer.add_scalar('Loss',loss.item(),iteration)
+                        
+                        if iteration % config.save_image_every == 0:
+
+                            model.eval()
+
+                            fake_images,_ = model.generate(gif_noise)
+                            fake_images = fake_images.detach().cpu()
+
+                            model.train()
+                            
+                            writer.add_images('Generated Images',fake_images,iteration)
+
+                            fake_images = make_grid(fake_images,h=config.grid_size,w=config.grid_size,gap=4,gap_value=1.0) \
+                                .mul(255) \
+                                .type(torch.uint8) \
+                                .numpy()
+                            
+                            images.append(fake_images)
+
                         ### *** Update iteration *** ###
                         iteration += 1
-
-                        ### *** Log to Tensorboard *** ###
-                        writer.add_scalar(f'loss',loss.item(),iteration)
 
                     ### *** Update history *** ###
                     history['loss'][-1] += loss.item() / len(loader)
 
-            msg = f'Epoch {epoch+1}/{epochs} [{phase}] Loss: {history["loss"][-1]:.4f}'
+            msg = f'Epoch {epoch+1}/{config.total_epochs} [{phase}] Loss: {history["loss"][-1]:.4f}'
 
             print(f"\n{msg}\n")
 
-    return pd.DataFrame(history)
+    return pd.DataFrame(history),images
 
 def main(args: Args) -> None:
 
@@ -245,7 +268,6 @@ def main(args: Args) -> None:
     ### ***** Initialize Models ***** ###
     logger.info('Initializing Models')
     model = create_model(config)
-    scheduler = create_scheduler(config)
 
     ### ***** Initialize Optimizers ***** ###
     logger.info('Initializing Optimizers')
@@ -258,11 +280,10 @@ def main(args: Args) -> None:
     ### ***** Train ***** ###
     logger.info('Starting Training')
 
-    history = train(
+    history,images = train(
         model = model,
         train_loader = train_dataloader,
         val_loader = val_dataloader,
-        scheduler = scheduler,
         loss_fn = loss_fn,
         optimizer = optimizer,
         epochs = config.total_epochs,
@@ -270,6 +291,11 @@ def main(args: Args) -> None:
     )
 
     logger.info('Training Complete')
+
+    ### ***** Save GIF ***** ###
+    logger.info('Saving GIF')
+    gif_path = os.path.join(experiment_dir,'images.gif')
+    imageio.mimsave(gif_path,images)
 
     ### ***** Save History ***** ###
     logger.info('Saving History')

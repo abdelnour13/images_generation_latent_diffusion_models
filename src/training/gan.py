@@ -65,9 +65,18 @@ class Args:
 
 def create_dataset(config : Config) -> ImageDirectory:
 
+    transfroms = [
+        T.ToTensor()
+    ]
+
+    if config.gan_config.output_activation == 'tanh':
+        transfroms.append(T.Normalize(mean=[0.5,0.5,0.5],std=[0.5,0.5,0.5]))
+
+    transfroms = T.Compose(transfroms)
+
     train_dataset = ImageDirectory(
         dataset = config.dataset,
-        transform = T.ToTensor()
+        transform = transfroms
     )
 
     return train_dataset

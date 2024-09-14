@@ -11,11 +11,11 @@ import imageio
 from torch import nn,optim
 from torch.utils.data import DataLoader
 from src.datasets import ImageDirectory
-from src.models import VQVAE, Discriminator
+from src.models import VQVAE, Discriminator, VQVAEConfig, DiscriminatorConfig
 from src.utils import seed_everything,load_json
 from torchvision import transforms as T
 from argparse import ArgumentParser
-from dataclasses import dataclass
+from dataclasses import dataclass,field
 from typing import Optional
 from tqdm.auto import tqdm
 from lpips import LPIPS
@@ -36,8 +36,8 @@ class Config:
     device : str = 'cuda'
 
     ### *** Models *** ###
-    vqvae_args : Optional[dict] = None
-    discriminator_args : Optional[dict] = None
+    vqvae_args : VQVAEConfig = field(default_factory=VQVAEConfig)
+    discriminator_args : DiscriminatorConfig = field(default_factory=DiscriminatorConfig)
     lpips_net : str = 'squeeze' # 'squeeze','vgg' or 'alex'
 
     ### *** Training *** ###
@@ -66,6 +66,14 @@ class Config:
     ### *** Dataset *** ###
     dataset : str = next(iter(D.DATASETS.keys()))
 
+    def __post_init__(self):
+
+        if isinstance(self.vqvae_args,dict):
+            self.vqvae_args = VQVAEConfig(**self.vqvae_args)
+
+        if isinstance(self.discriminator_args,dict):
+            self.discriminator_args = DiscriminatorConfig(**self.discriminator_args)
+
 @dataclass
 class Args:
     experiment : str
@@ -75,19 +83,19 @@ def create_transforms(config : Config) -> tuple[T.Compose,T.Compose,T.Compose]:
     train_transforms = T.Compose([
         T.Resize(config.image_size) if config.image_size is not None else T.Lambda(lambda x: x),
         T.ToTensor(),
-        T.Lambda(lambda x : 2 * x - 1)
+        T.Lambda(lambda x : 2 * x - 1) if config.vqvae_args.output_activation == 'tanh' else T.Lambda(lambda x : x)
     ])
 
     val_transforms = T.Compose([
         T.Resize(config.image_size) if config.image_size is not None else T.Lambda(lambda x: x),
         T.ToTensor(),
-        T.Lambda(lambda x : 2 * x - 1)
+        T.Lambda(lambda x : 2 * x - 1) if config.vqvae_args.output_activation == 'tanh' else T.Lambda(lambda x : x)
     ])
 
     test_transforms = T.Compose([
         T.Resize(config.image_size) if config.image_size is not None else T.Lambda(lambda x: x),
         T.ToTensor(),
-        T.Lambda(lambda x : 2 * x - 1)
+        T.Lambda(lambda x : 2 * x - 1) if config.vqvae_args.output_activation == 'tanh' else T.Lambda(lambda x : x)
     ])
 
     return train_transforms,val_transforms,test_transforms
@@ -148,8 +156,8 @@ def create_loaders(config : Config) -> tuple[DataLoader,DataLoader,DataLoader]:
 
 def create_models(config : Config) -> tuple[VQVAE,Discriminator,LPIPS]:
 
-    vqvae = VQVAE(**config.vqvae_args)
-    discriminator = Discriminator(**config.discriminator_args)
+    vqvae = VQVAE(config.vqvae_args)
+    discriminator = Discriminator(config.discriminator_args)
     lpip_net = LPIPS(net = config.lpips_net)
 
     vqvae = vqvae.to(config.device)

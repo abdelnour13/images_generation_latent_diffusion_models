@@ -12,7 +12,8 @@
         "norm_channels" : 32,
         "z_dim" : 3,
         "codebook_size" : 2048,
-        "num_heads" : 4
+        "num_heads" : 4,
+        "output_activation" : "tanh"
     },
 
     "discriminator_args" : {
@@ -42,7 +43,6 @@
 
     "save_image_every" : 500,
     "grid_size" : 4,
-    "max_frames" : 50,
 
     "dataset" : "anime_faces"
 

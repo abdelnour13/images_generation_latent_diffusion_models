@@ -8,7 +8,7 @@
         "latent_dim" : 128,
         "channels" : [512,256,128,64],
         "out_channels" : 3,
-        "output_activation" : "sigmoid"
+        "output_activation" : "tanh"
     },
 
     "discriminator_config" : {
@@ -18,7 +18,7 @@
         "paddings" : [1,1,1,1,0]
     },
 
-    "batch_size" : 16,
+    "batch_size" : 32,
     "learning_rate" : 1e-4,
     "total_epochs" : 100,
     "noise_size" : [4,4],
