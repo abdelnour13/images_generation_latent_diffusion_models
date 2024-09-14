@@ -17,3 +17,40 @@ This repository contains the code for generating images with the Latent Diffusio
 - Latent diffusion generation process (decoded every 20 timesteps)
 
 ![ Latent diffusion generation process (decoded every 20 timesteps)](experiments/diffusion/generation_process.gif)
+
+## Setup
+
+```
+git clone git@github.com:abdelnour13/images_generation_latent_diffusion_models.git
+conda create -n latent-diffusion
+conda activate latent-diffusion
+pip install requirements.txt
+```
+
+## Download data
+
+```
+python3 download.py [-h] --datasets {celeb_a,anime_faces,celeb_a anime_faces}
+```
+
+## Create experiment
+
+```
+python3 create.py [-h] [--on-exists {error,overwrite}] --name NAME --type {vqvae,diffusion,gan}
+```
+
+## Train a model
+
+- To train a VQVAE
+
+```
+cd src/training
+python3 vqvae.py --experiment EXPERIMENT
+```
+
+- To train a Latent diffusion model
+
+```
+cd src/training
+python3 diffusion.py --experiment EXPERIMENT
+```
