@@ -33,13 +33,13 @@ pip install requirements.txt
 python3 download.py [-h] --datasets {celeb_a,anime_faces,celeb_a anime_faces}
 ```
 
-## Create experiment
+## Create an experiment
 
 ```
 python3 create.py [-h] [--on-exists {error,overwrite}] --name NAME --type {vqvae,diffusion,gan}
 ```
 
-## Train a model
+## Models training
 
 - To train the VQVAE
 
