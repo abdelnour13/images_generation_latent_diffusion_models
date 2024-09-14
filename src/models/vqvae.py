@@ -1,18 +1,18 @@
 import torch
 from torch import nn,Tensor
 from .layers import DownSampleBlock,MidBlock,UpSampleBlock
-from dataclasses import dataclass
+from dataclasses import dataclass,field
 
 @dataclass
 class VQVAEConfig:
-    in_channels : int
-    down_channels : list[int]
-    mid_channels : list[int]
-    num_layers : int
-    norm_channels : int
-    z_dim : int
-    codebook_size : int
-    num_heads : int
+    in_channels : int = 3
+    down_channels : list[int] = field(default_factory=lambda:[64,64,128])
+    mid_channels : list[int] = field(default_factory=lambda:[128,128])
+    num_layers : int = 2
+    norm_channels : int = 32
+    z_dim : int = 3
+    codebook_size : int = 2048
+    num_heads : int = 4
     output_activation : str = 'tanh'
 
 class VQVAE(nn.Module):

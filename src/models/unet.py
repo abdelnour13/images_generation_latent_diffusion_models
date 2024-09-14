@@ -2,18 +2,18 @@ import torch
 from torch import nn, Tensor
 from .layers import DownSampleBlock, MidBlock, UpSampleBlock, TimeEmbedding
 from typing import Literal
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 @dataclass
 class UNetConfig:
-    in_channels : int
-    out_channels : int
-    down_channels : list[int]
-    mid_channels : list[int]
-    num_layers : int
-    norm_channels : int
-    num_heads : int
-    t_emb_dim : int
+    in_channels : int = 3
+    out_channels : int = 32
+    down_channels : list[int] = field(default_factory=lambda: [128,192,256,384])
+    mid_channels : list[int] = field(default_factory=lambda: [384,256])
+    num_layers : int = 2
+    norm_channels : int = 32
+    num_heads : int = 8
+    t_emb_dim : int = 512
     output_activation : Literal['sigmoid','tanh','linear'] = 'linear'
 
 class UNet(nn.Module):
