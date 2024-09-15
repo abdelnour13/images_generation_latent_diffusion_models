@@ -52,7 +52,7 @@ class ImageDirectory(Dataset):
         image_path = os.path.join(DATASETS[self.dataset].images_dir, image_id)
 
         image = Image.open(image_path).convert('RGB')
-        palette = get_palette(np.array(image), self.color_palette_size)
+        # palette = get_palette(np.array(image).reshape(-1,3), self.color_palette_size) / 255.0
 
         if self.transform is not None:
             image = self.transform(image)
@@ -60,5 +60,4 @@ class ImageDirectory(Dataset):
         return {
             'id' : idx,
             'image' : image,
-            'palette' : palette,
         }

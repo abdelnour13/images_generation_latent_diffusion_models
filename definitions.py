@@ -15,12 +15,17 @@ class DatasetConfig:
 DATASETS = {
     "celeb_a" : DatasetConfig(
         root = os.path.join(DATA_DIR, 'celeb_a'),
-        images_dir=os.path.join(DATA_DIR, 'celeb_a', 'img_align_celeba', 'img_align_celeba'),
-        splits_file=os.path.join(DATA_DIR, 'celeb_a', 'list_eval_partition.csv')
+        images_dir = os.path.join(DATA_DIR, 'celeb_a', 'img_align_celeba', 'img_align_celeba'),
+        splits_file = os.path.join(DATA_DIR, 'celeb_a', 'list_eval_partition.csv')
     ),
     "anime_faces" : DatasetConfig(
         root = os.path.join(DATA_DIR, 'anime_faces'),
-        images_dir=os.path.join(DATA_DIR, 'anime_faces', 'images'),
-        splits_file=os.path.join(DATA_DIR, 'anime_faces', 'splits.csv')
-    )
+        images_dir = os.path.join(DATA_DIR, 'anime_faces', 'images'),
+        splits_file = os.path.join(DATA_DIR, 'anime_faces', 'splits.csv')
+    ),
+    'cartoon_faces' : DatasetConfig(
+        root = os.path.join(DATA_DIR, 'cartoon_faces'),
+        images_dir = os.path.join(DATA_DIR, 'cartoon_faces', 'cartoonset100k_jpg'),
+        splits_file = os.path.join(DATA_DIR, 'cartoon_faces', 'splits.csv')
+    ),
 }
