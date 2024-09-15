@@ -8,6 +8,11 @@ This repository contains the code for generating images with the Latent Diffusio
 
 ![VQVAE Output during training (every 500 iterations)](experiments/vqvae/images.gif)
 
+- Original Vs Reconstructed images
+
+<img src="experiments/vqvae/images.png" width="300" />
+
+
 ## Latent diffusion model results
 
 - Latent diffusion output during training (every 2000 iterations)

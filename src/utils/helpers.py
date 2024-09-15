@@ -12,6 +12,26 @@ from typing import Optional
 from imagesize import get
 from collections import OrderedDict
 from torch.nn import functional as F
+from my_palette import PaletteCreation
+
+def hex_to_rgb(hex : str) -> tuple[int, int, int]:
+
+    hex = hex.lstrip('#')
+    rgb = tuple(int(hex[i:i+2], 16) for i in (0, 2, 4))
+
+    return rgb
+
+def get_palette(
+    image : Image.Image,
+    n_colors : int = 5
+) -> np.ndarray:
+    
+    palette = PaletteCreation()
+    palette = palette.get_palette(image, n_colors) # list[str] 
+    palette = [hex_to_rgb(color) for color in palette] # list[tuple[int, int, int]]
+    palette = np.array(palette) # (n_colors, 3)
+
+    return palette
 
 def get_last_checkpoint(checkpoints_dir : str) -> Optional[OrderedDict]:
 

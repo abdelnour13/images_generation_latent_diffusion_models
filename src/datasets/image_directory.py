@@ -1,18 +1,21 @@
 import pandas as pd
 import os
 import sys
+import numpy as np
 sys.path.append('../..')
 from torch.utils.data import Dataset
 from definitions import DATASETS
 from typing import Optional,Callable
 from PIL import Image
+from src.utils import get_palette
 
 class ImageDirectory(Dataset):
 
     def __init__(self,
         dataset : str,
         split : Optional[str] = None,
-        transform : Optional[Callable] = None
+        transform : Optional[Callable] = None,
+        color_palette_size : int = 5
     ) -> None:
         
         super().__init__()
@@ -20,6 +23,7 @@ class ImageDirectory(Dataset):
         self.dataset = dataset
         self.split = split
         self.transform = transform
+        self.color_palette_size = color_palette_size
 
         self._verify()
 
@@ -48,6 +52,7 @@ class ImageDirectory(Dataset):
         image_path = os.path.join(DATASETS[self.dataset].images_dir, image_id)
 
         image = Image.open(image_path).convert('RGB')
+        palette = get_palette(np.array(image), self.color_palette_size)
 
         if self.transform is not None:
             image = self.transform(image)
@@ -55,4 +60,5 @@ class ImageDirectory(Dataset):
         return {
             'id' : idx,
             'image' : image,
+            'palette' : palette,
         }

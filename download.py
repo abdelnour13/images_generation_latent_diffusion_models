@@ -6,12 +6,17 @@ from sklearn.model_selection import train_test_split
 from definitions import DATA_DIR
 from argparse import ArgumentParser
 from dataclasses import dataclass
+from tqdm.auto import tqdm
+from src.utils import seed_everything
 
 @dataclass
 class Args:
     datasets: list[str]
 
+seed = 42
 api = kaggle.KaggleApi()
+
+seed_everything(seed)
 
 api.authenticate()
 
@@ -38,8 +43,41 @@ def download_anime_faces():
 
     df = pd.DataFrame(columns=['image_id','partition'])
 
-    train_images, val_images = train_test_split(images, test_size=0.1, random_state=42)
-    train_images, _ = train_test_split(train_images, test_size=0.1, random_state=42)
+    train_images, val_images = train_test_split(images, test_size=0.1, random_state=seed)
+    train_images, _ = train_test_split(train_images, test_size=0.1, random_state=seed)
+
+    df['image_id'] = images
+    df['partition'] = df['image_id'].apply(lambda x: 0 if x in train_images else 1 if x in val_images else 2)
+
+    df.to_csv(os.path.join(dataset_path, 'splits.csv'), index=False)
+
+def dowbload_cartoon_faces():
+
+    dataset_path = os.path.join(DATA_DIR, 'cartoon_faces')
+    os.makedirs(dataset_path, exist_ok=True)
+
+    # api.dataset_download_cli('brendanartley/cartoon-faces-googles-cartoon-set', path=dataset_path, unzip=True)
+
+    images_dir = os.path.join(dataset_path, 'cartoonset100k_jpg')
+    
+    """subfolders = os.listdir(images_dir)
+
+    for subfolder in subfolders:
+
+        subfolder_path = os.path.join(images_dir, subfolder)
+        images = os.listdir(subfolder_path)
+
+        for image in tqdm(images, desc=f"Moving images from {subfolder}"):
+            shutil.move(os.path.join(subfolder_path, image), os.path.join(images_dir, image))
+
+        os.rmdir(subfolder_path)"""
+    
+    images = os.listdir(images_dir)
+
+    df = pd.DataFrame(columns=['image_id','partition'])
+
+    train_images, val_images = train_test_split(images, test_size=0.1, random_state=seed)
+    train_images, _ = train_test_split(train_images, test_size=0.1, random_state=seed)
 
     df['image_id'] = images
     df['partition'] = df['image_id'].apply(lambda x: 0 if x in train_images else 1 if x in val_images else 2)
@@ -50,7 +88,8 @@ def main(args : Args):
     
     datasets = {
         'celeba': download_celeba,
-        'anime_faces': download_anime_faces
+        'anime_faces': download_anime_faces,
+        'cartoon_faces': dowbload_cartoon_faces
     }
 
     for dataset in args.datasets:
@@ -66,7 +105,7 @@ if __name__ == '__main__':
 
     parser = ArgumentParser()
 
-    parser.add_argument('--datasets', action='datasets to download', nargs='+', default=['celeba', 'anime_faces'])
+    parser.add_argument('--datasets', nargs='+', default=['celeba', 'anime_faces', 'cartoon_faces'])
 
     args = parser.parse_args()
 
