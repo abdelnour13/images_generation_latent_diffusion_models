@@ -15,7 +15,7 @@ class LatentDiffusionConfig:
     vqvae : VQVAEConfig = field(default_factory=VQVAEConfig)
     unet : UNetConfig = field(default_factory=UNetConfig)
     noise_scheduler : NoiseSchedulerConfig = field(default_factory=NoiseSchedulerConfig)
-    input_type : Literal['image','latent'] = 'image'
+    input_type : Literal['image','latent'] = 'latent'
 
     def __post_init__(self):
 

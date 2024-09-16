@@ -85,7 +85,7 @@ def main(args: Args):
     vqvae.load_state_dict(last_checkpoint['vqvae'])
 
     ### *** Feature extraction *** ###
-    save_dir = args.save_dir or os.path.join(EXPERIMENT_DIR, 'features')
+    save_dir = args.save_dir or os.path.join(D.DATASETS[config.dataset].root, 'features')
     os.makedirs(save_dir,exist_ok=True)
 
     feature_extract(

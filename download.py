@@ -56,11 +56,11 @@ def dowbload_cartoon_faces():
     dataset_path = os.path.join(DATA_DIR, 'cartoon_faces')
     os.makedirs(dataset_path, exist_ok=True)
 
-    # api.dataset_download_cli('brendanartley/cartoon-faces-googles-cartoon-set', path=dataset_path, unzip=True)
+    api.dataset_download_cli('brendanartley/cartoon-faces-googles-cartoon-set', path=dataset_path, unzip=True)
 
     images_dir = os.path.join(dataset_path, 'cartoonset100k_jpg')
     
-    """subfolders = os.listdir(images_dir)
+    subfolders = os.listdir(images_dir)
 
     for subfolder in subfolders:
 
@@ -70,7 +70,7 @@ def dowbload_cartoon_faces():
         for image in tqdm(images, desc=f"Moving images from {subfolder}"):
             shutil.move(os.path.join(subfolder_path, image), os.path.join(images_dir, image))
 
-        os.rmdir(subfolder_path)"""
+        os.rmdir(subfolder_path)
     
     images = os.listdir(images_dir)
 
