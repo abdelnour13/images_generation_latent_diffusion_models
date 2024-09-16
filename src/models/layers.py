@@ -69,11 +69,9 @@ class ResBlock(nn.Module):
         self.att_gn = nn.GroupNorm(norm_channels,out_channels) if num_heads is not None else None
         self.att = nn.MultiheadAttention(out_channels,num_heads,batch_first=True) if num_heads is not None else None
 
-        self.cross_attn = nn.Sequential(
-            nn.Linear(context_dim,out_channels),
-            nn.GroupNorm(norm_channels,out_channels),
-            nn.MultiheadAttention(out_channels,num_heads,batch_first=True),
-        ) if context_dim is not None else None
+        self.cross_attn_gn = context_dim and nn.GroupNorm(norm_channels,out_channels)
+        self.context_proj = context_dim and nn.Linear(context_dim,out_channels)
+        self.cross_attn = context_dim and nn.MultiheadAttention(out_channels,num_heads,batch_first=True)
 
     def forward(self,input : tuple[Tensor,Tensor | None,Tensor | None]) -> Tensor:
         
@@ -114,16 +112,17 @@ class ResBlock(nn.Module):
 
             x = x + att_out
 
-        if self.context_dim is not None:
+        if context is not None:
 
-            assert context is not None, "context must be provided if context_dim is not None"
+            assert self.context_dim is not None, "context_dim must be provided when context is not None"
 
             B,C,H,W = x.shape
 
             att_in = x.view(B,C,H*W)
-            att_in = self.cross_attn(att_in)
+            att_in = self.cross_attn_gn(att_in)
             att_in = torch.transpose(x,1,2)
 
+            context = self.context_proj(context)
             att_out,_ = self.cross_attn(att_in,context,context)
             att_out = torch.transpose(att_out,1,2)
             att_out = att_out.view(B,C,H,W)

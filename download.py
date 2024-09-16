@@ -56,6 +56,7 @@ def dowbload_cartoon_faces():
     dataset_path = os.path.join(DATA_DIR, 'cartoon_faces')
     os.makedirs(dataset_path, exist_ok=True)
 
+    ### Images
     api.dataset_download_cli('brendanartley/cartoon-faces-googles-cartoon-set', path=dataset_path, unzip=True)
 
     images_dir = os.path.join(dataset_path, 'cartoonset100k_jpg')
@@ -83,6 +84,13 @@ def dowbload_cartoon_faces():
     df['partition'] = df['image_id'].apply(lambda x: 0 if x in train_images else 1 if x in val_images else 2)
 
     df.to_csv(os.path.join(dataset_path, 'splits.csv'), index=False)
+
+    ### Annotations
+    api.dataset_download_cli('kirkdco/google-cartoon-faces-attributes', path=dataset_path, unzip=True)
+
+    attributes_df = pd.read_csv(os.path.join(dataset_path, 'cartoon_image_attributes.csv'))
+    attributes_df['filename'] = attributes_df['filename'].apply(lambda x: x.split('/')[-1])
+    attributes_df.to_csv(os.path.join(dataset_path, 'cartoon_image_attributes.csv'), index=False)
 
 def main(args : Args):
     
