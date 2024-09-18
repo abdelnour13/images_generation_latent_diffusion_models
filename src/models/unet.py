@@ -7,7 +7,8 @@ from typing import Optional
 @dataclass
 class UNetConfig:
     in_channels : int = 3
-    out_channels : int = 32
+    out_channels : int = 3
+    last_channels : int = 32
     down_channels : list[int] = field(default_factory=lambda: [128,192,256,384])
     mid_channels : list[int] = field(default_factory=lambda: [384,256])
     num_layers : int = 2
@@ -73,7 +74,7 @@ class UNet(nn.Module):
         self.up_blocks = nn.ModuleList([
             UpSampleBlock(
                 in_channels = 2 * config.down_channels[i],
-                out_channels = config.down_channels[i-1] if i != 0 else config.out_channels,
+                out_channels = config.down_channels[i-1] if i != 0 else config.last_channels,
                 upsample = True,
                 num_layers = config.num_layers,
                 norm_channels = config.norm_channels,
@@ -86,9 +87,9 @@ class UNet(nn.Module):
             for i in reversed(range(len(config.down_channels) - 1))
         ])
 
-        self.norm_out = nn.GroupNorm(num_groups=config.norm_channels,num_channels=config.out_channels)
+        self.norm_out = nn.GroupNorm(num_groups=config.norm_channels,num_channels=config.last_channels)
         self.silu = nn.SiLU()
-        self.conv_out = nn.Conv2d(in_channels=config.out_channels,out_channels=config.in_channels,kernel_size=3,padding=1)
+        self.conv_out = nn.Conv2d(in_channels=config.last_channels,out_channels=config.out_channels,kernel_size=3,padding=1)
 
     def forward(self, 
         x : Tensor, 

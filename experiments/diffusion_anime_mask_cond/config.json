@@ -1,0 +1,59 @@
+{
+
+    "seed" : 42,
+
+    "device" : "cuda",
+
+    "model_config" : {
+        "vqvae" : {
+            "in_channels" : 3,
+            "down_channels" : [64, 64, 128],
+            "mid_channels" : [128,128],
+            "num_layers" : 2,
+            "norm_channels" : 32,
+            "z_dim" : 3,
+            "codebook_size" : 2048,
+            "num_heads" : 4,
+            "output_activation" : "tanh"
+        },
+        "unet" : {
+            "in_channels" : 4,
+            "out_channels" : 3,
+            "last_channels" : 32,
+            "down_channels" : [128,192,256,384],
+            "mid_channels" : [384,256],
+            "num_layers" : 2,
+            "norm_channels" : 32,
+            "num_heads" : 8,
+            "t_emb_dim" : 512,
+            "output_activation" : "linear"
+        },
+        "noise_scheduler" : {
+            "timesteps" : 1000,
+            "beta_start" : 0.0015,
+            "beta_end" : 0.0195
+        },
+        "input_type" : "latent",
+        "mask_cond" : {
+            "mask_dim_in" : 1,
+            "mask_dim_out" : 1,
+            "condition_mask_rate" : 0.1
+        }
+    },
+
+    "vqvae_exp" : "vqvae_anime",
+
+    "batch_size" : 16,
+    "learning_rate" : 1e-4,
+    "total_epochs" : 150,
+
+    "num_workers" : 4,
+    "prefetch_factor" : 2,
+
+    "dataset" : "anime_faces",
+
+    "grid_size" : 4,
+    "save_image_every" : 2000,
+    "noise_size" : [16,16]
+
+}

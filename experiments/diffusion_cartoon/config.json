@@ -23,7 +23,7 @@
         },
         "unet": {
             "in_channels": 3,
-            "out_channels": 32,
+            "last_channels": 32,
             "down_channels": [
                 128,
                 192,

@@ -15,6 +15,13 @@ class MetadataCondConfig:
     config : dict = field(default_factory=dict)
     num_layers : int = 4
     dropout : float = 0.1
+    condition_mask_rate : float = 0.1
+
+@dataclass
+class MaskCondConfig:
+    mask_dim_in : int = 1
+    mask_dim_out : int = 1
+    condition_mask_rate : float = 0.1
 
 @dataclass
 class LatentDiffusionConfig:
@@ -25,8 +32,7 @@ class LatentDiffusionConfig:
     input_type : Literal['image','latent'] = 'latent'
 
     metadata_cond : Optional[MetadataCondConfig] = None
-
-    condition_mask_rate : float = 0.1
+    mask_cond : Optional[MaskCondConfig] = None
 
     def __post_init__(self):
 
@@ -41,6 +47,9 @@ class LatentDiffusionConfig:
 
         if self.metadata_cond is not None and isinstance(self.metadata_cond,dict):
             self.metadata_cond = MetadataCondConfig(**self.metadata_cond)
+
+        if self.mask_cond is not None and isinstance(self.mask_cond,dict):
+            self.mask_cond = MaskCondConfig(**self.mask_cond)
 
 class LatentDiffusion(nn.Module):
 
@@ -61,30 +70,58 @@ class LatentDiffusion(nn.Module):
             dropout=config.metadata_cond.dropout
         ) if config.metadata_cond is not None else None
 
+        self.mask_conv = nn.Conv2d(
+            in_channels=config.mask_cond.mask_dim_in,
+            out_channels=config.mask_cond.mask_dim_out,
+            kernel_size=1,
+        ) if config.mask_cond is not None else None
+
         if config.input_type == 'latent':
             self.vqvae.encoder = nn.Identity()
 
     def forward(self, 
         x : Tensor,
-        metadata : Optional[dict[str,Tensor]] = None
+        metadata : Optional[dict[str,Tensor]] = None,
+        mask : Optional[Tensor] = None
     ) -> tuple[Tensor,Tensor,Tensor]:
         
+        # Get the compressed representation of the input
+        # if the input type is a raw image
         if self.config.input_type == 'image':
             with torch.inference_mode():
                 x = self.vqvae.encoder(x)
                 x = self.vqvae.quantize(x)
                 x = x['quant_out']
 
+        # Handle conditioning with metadata
         if metadata is not None:
 
             assert self.metadata_cond is not None, 'Metadata Condition Config must be provided'
 
-            if torch.rand(1).item() > self.config.condition_mask_rate or not self.training:
+            if torch.rand(1).item() > self.config.metadata_cond.condition_mask_rate or not self.training:
                 metadata = self.metadata_cond(metadata)
             else:
                 metadata = None
 
+        # Add noise to the input
         noised_x,noise,t = self.noise_scheduler(x)
+
+        # Handle conditioning with mask
+        if mask is not None and self.config.mask_cond is None:
+            raise ValueError('Mask Condition Config must be provided')
+
+        if self.config.mask_cond is not None:
+
+            if self.training:
+
+                a = torch.rand(mask.size(0),device=mask.device) < self.config.mask_cond.condition_mask_rate
+                a = a.float().reshape(-1,1,1,1)
+                mask = mask * a
+
+            mask = self.mask_conv(mask)
+            noised_x = torch.cat([noised_x,mask],dim=1)
+
+        # UNet forward pass
         predicted_noise = self.unet(noised_x,t,metadata)
 
         return predicted_noise,noise,t
@@ -92,6 +129,7 @@ class LatentDiffusion(nn.Module):
     def generate(self, 
         x : Tensor,
         metadata : Optional[dict[str,Tensor]] = None,
+        mask : Optional[Tensor] = None,
         *,
         cf_scale : float = 1.0,
         decode_every : Optional[int] = None,
@@ -101,6 +139,7 @@ class LatentDiffusion(nn.Module):
 
         assert not self.training, 'Model must be in eval mode to generate samples'
         assert cf_scale == 1.0 or metadata is not None, 'Metadata must be provided for classifier free guidance'
+        assert mask is None or self.config.mask_cond is not None, 'Mask Condition Config must be provided'
 
         decoded = []
         timesteps = self.config.noise_scheduler.timesteps
@@ -110,11 +149,20 @@ class LatentDiffusion(nn.Module):
             if metadata is not None:
 
                 ### Fill missing keys
+                ### To enable generation
+                ### from partial metadata
                 for key,(num_classes,_) in self.config.metadata_cond.config.items():
                     if key not in metadata:
                         metadata[key] = torch.zeros(x.size(0),dtype=torch.long,device=x.device).fill_(num_classes)
 
                 metadata = self.metadata_cond(metadata)
+
+            # If no maks is provided
+            # use an all zero mask to 
+            # indicate no mask condition
+            if mask is None and self.config.mask_cond is not None:
+                dim_in = self.config.mask_cond.mask_dim_in
+                mask = torch.zeros(x.size(0),dim_in,x.size(2),x.size(3),device=x.device)
 
             iterator = reversed(range(timesteps))
 
@@ -125,7 +173,8 @@ class LatentDiffusion(nn.Module):
 
                 t = torch.tensor(t).repeat(x.size(0)).to(x.device)
 
-                noise = self.unet.forward(x,t,metadata)
+                unet_in = torch.cat([x,mask],dim=1) if mask is not None else x
+                noise = self.unet.forward(unet_in,t,metadata)
 
                 if cf_scale > 1.0:
                     noise_uncond = self.unet.forward(x,t,None)

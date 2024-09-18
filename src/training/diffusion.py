@@ -85,6 +85,12 @@ def create_dataset(config: Config,split : str) -> ImageDirectory:
         split = split,
         type=config.model_config.input_type,
         return_metadata=(config.model_config.metadata_cond is not None),
+        mask_transform=T.Compose([
+            T.Resize(config.noise_size),
+            T.ToImage(),
+            T.ToDtype(dtype=torch.float32,scale=True),
+        ]),
+        return_masks=(config.model_config.mask_cond is not None),
     )
 
     return dataset
@@ -194,12 +200,16 @@ def train(
                     optimizer.zero_grad()
 
                 ### *** Move data to device *** ###
-                data = move_data_to_device(data,config.device)
+                data : dict = move_data_to_device(data,config.device)
 
                 with torch.set_grad_enabled(training):
                     
                     ### *** Forward pass *** ###
-                    y_hat,y,t = model.forward(data['data'],data.get('metadata',None))
+                    y_hat,y,t = model.forward(
+                        x=data['data'],
+                        metadata=data.get('metadata',None),
+                        mask=data.get('mask',None),
+                    )
 
                     ### *** Calculate loss *** ###
                     loss = loss_fn(y_hat,y)

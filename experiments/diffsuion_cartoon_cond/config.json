@@ -23,7 +23,7 @@
         },
         "unet": {
             "in_channels": 3,
-            "out_channels": 32,
+            "last_channels": 32,
             "down_channels": [
                 128,
                 192,
@@ -70,9 +70,9 @@
                 "eye_eyebrow_distance": [3, 1]
             },
             "num_layers" : 4,
-            "dropout" : 0.1
-        },
-        "condition_mask_rate" : 0.1
+            "dropout" : 0.1,
+            "condition_mask_rate" : 0.1
+        }
     },
     "vqvae_exp": "vqvae_cartoon",
     "batch_size": 32,

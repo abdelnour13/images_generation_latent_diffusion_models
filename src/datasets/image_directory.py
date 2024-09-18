@@ -14,8 +14,10 @@ class ImageDirectory(Dataset):
         dataset : str,
         split : Optional[str] = None,
         transform : Optional[Callable] = None,
+        mask_transform : Optional[Callable] = None,
         type : Literal['image','latent'] = 'image',
-        return_metadata : bool = False
+        return_metadata : bool = False,
+        return_masks : bool = False
     ) -> None:
         
         super().__init__()
@@ -23,9 +25,12 @@ class ImageDirectory(Dataset):
         self.dataset = DATASETS[dataset]
         self.split = split
         self.transform = transform
+        self.mask_transform = mask_transform
         self.type = type
         self.latents_dir = os.path.join(self.dataset.root, 'features')
+        self.masks_dir = os.path.join(self.dataset.root, 'masks')
         self.return_metadata = return_metadata
+        self.return_masks = return_masks
 
         if self.return_metadata:
 
@@ -52,6 +57,9 @@ class ImageDirectory(Dataset):
         if self.type == 'latent' and not os.path.exists(self.latents_dir):
             raise FileNotFoundError(f"Latents directory not found at {self.latents_dir}")
         
+        if self.return_masks and not os.path.exists(self.masks_dir):
+            raise FileNotFoundError(f"Masks directory not found at {self.masks_dir}")
+        
     def __len__(self) -> int:
         return len(self.splits_df)
     
@@ -76,8 +84,18 @@ class ImageDirectory(Dataset):
             'data' : image,
         }
 
-        if self.metadata is not None:
+        if self.return_metadata:
             metadata = self.metadata[self.metadata['image_id'] == image_id].iloc[0]
             data['metadata'] = metadata.drop('image_id').to_dict()
+
+        if self.return_masks:
+
+            mask_path = os.path.join(self.masks_dir, f'{os.path.splitext(image_id)[0]}.png')
+            mask = Image.open(mask_path).convert('L')
+
+            if self.mask_transform is not None:
+                mask = self.mask_transform(mask)
+
+            data['mask'] = mask
 
         return data
