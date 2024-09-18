@@ -59,7 +59,7 @@ class ImageDirectory(Dataset):
 
         image_id = row['image_id']
 
-        if self.type == 'latent':
+        if self.type == 'image':
             image_path = os.path.join(self.dataset.images_dir, image_id)
             image = Image.open(image_path).convert('RGB')
         else:

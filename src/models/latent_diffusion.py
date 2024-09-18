@@ -79,7 +79,7 @@ class LatentDiffusion(nn.Module):
 
             assert self.metadata_cond is not None, 'Metadata Condition Config must be provided'
 
-            if torch.rand(1).item() > self.config.condition_mask_rate:
+            if torch.rand(1).item() > self.config.condition_mask_rate or not self.training:
                 metadata = self.metadata_cond(metadata)
             else:
                 metadata = None
@@ -91,17 +91,30 @@ class LatentDiffusion(nn.Module):
     
     def generate(self, 
         x : Tensor,
+        metadata : Optional[dict[str,Tensor]] = None,
+        *,
+        cf_scale : float = 1.0,
         decode_every : Optional[int] = None,
         progress : bool = True,
         device : Optional[str] = None
     ) -> tuple[Tensor,list[Tensor]]:
 
         assert not self.training, 'Model must be in eval mode to generate samples'
+        assert cf_scale == 1.0 or metadata is not None, 'Metadata must be provided for classifier free guidance'
 
         decoded = []
         timesteps = self.config.noise_scheduler.timesteps
 
         with torch.inference_mode():
+
+            if metadata is not None:
+
+                ### Fill missing keys
+                for key,(num_classes,_) in self.config.metadata_cond.config.items():
+                    if key not in metadata:
+                        metadata[key] = torch.zeros(x.size(0),dtype=torch.long,device=x.device).fill_(num_classes)
+
+                metadata = self.metadata_cond(metadata)
 
             iterator = reversed(range(timesteps))
 
@@ -111,7 +124,13 @@ class LatentDiffusion(nn.Module):
             for t in iterator:
 
                 t = torch.tensor(t).repeat(x.size(0)).to(x.device)
-                noise = self.unet(x,t)
+
+                noise = self.unet.forward(x,t,metadata)
+
+                if cf_scale > 1.0:
+                    noise_uncond = self.unet.forward(x,t,None)
+                    noise = noise_uncond + cf_scale * (noise - noise_uncond)
+
                 x,x0 = self.noise_scheduler.denoise(x,noise,t)
 
                 if decode_every is not None and t[0].item() % decode_every == 0:

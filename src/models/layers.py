@@ -39,6 +39,7 @@ class ResBlock(nn.Module):
         num_heads : int | None = None,
         t_emb_dim : int | None = None,
         context_dim : int | None = None,
+        cross_att_num_heads : int | None = None,
     ) -> None:
         super().__init__()
 
@@ -51,6 +52,7 @@ class ResBlock(nn.Module):
         self.num_heads = num_heads
         self.t_emb_dim = t_emb_dim
         self.context_dim = context_dim
+        self.cross_att_num_heads = cross_att_num_heads
 
         self.gn1 = nn.GroupNorm(norm_channels,in_channels)
         self.silu1 = nn.SiLU()
@@ -72,7 +74,7 @@ class ResBlock(nn.Module):
 
         self.cross_attn_gn = context_dim and nn.GroupNorm(norm_channels,out_channels)
         self.context_proj = context_dim and nn.Linear(context_dim,out_channels)
-        self.cross_attn = context_dim and nn.MultiheadAttention(out_channels,num_heads,batch_first=True)
+        self.cross_attn = context_dim and nn.MultiheadAttention(out_channels,cross_att_num_heads,batch_first=True)
 
     def forward(self,input : tuple[Tensor,Tensor | None,Tensor | None]) -> Tensor:
         
@@ -121,9 +123,10 @@ class ResBlock(nn.Module):
 
             att_in = x.view(B,C,H*W)
             att_in = self.cross_attn_gn(att_in)
-            att_in = torch.transpose(x,1,2)
+            att_in = torch.transpose(att_in,1,2)
 
             context = self.context_proj(context)
+
             att_out,_ = self.cross_attn(att_in,context,context)
             att_out = torch.transpose(att_out,1,2)
             att_out = att_out.view(B,C,H,W)
@@ -143,6 +146,7 @@ class DownSampleBlock(nn.Module):
         num_heads : int | None = None,
         t_emb_dim : int | None = None,
         context_dim : int | None = None,
+        cross_att_num_heads : int | None = None,
     ) -> None:
         
         super().__init__()
@@ -155,6 +159,7 @@ class DownSampleBlock(nn.Module):
         self.num_heads = num_heads
         self.t_emb_dim = t_emb_dim
         self.context_dim = context_dim
+        self.cross_att_num_heads = cross_att_num_heads
 
         self.layers = nn.Sequential(*[
             ResBlock(
@@ -166,7 +171,8 @@ class DownSampleBlock(nn.Module):
                 padding = 1,
                 t_emb_dim = t_emb_dim,
                 num_heads = num_heads,
-                context_dim = context_dim
+                context_dim = context_dim,
+                cross_att_num_heads = cross_att_num_heads
             )
             for i in range(num_layers)
         ])
@@ -196,6 +202,7 @@ class MidBlock(nn.Module):
         num_heads : int | None = None,
         t_emb_dim : int | None = None,
         context_dim : int | None = None,
+        cross_att_num_heads : int | None = None,
     ) -> None:
         super().__init__()
 
@@ -206,6 +213,7 @@ class MidBlock(nn.Module):
         self.num_heads = num_heads
         self.t_emb_dim = t_emb_dim
         self.context_dim = context_dim
+        self.cross_att_num_heads = cross_att_num_heads
 
         self.layers = nn.Sequential(*[
             ResBlock(
@@ -217,7 +225,8 @@ class MidBlock(nn.Module):
                 padding = 1,
                 num_heads = num_heads,
                 t_emb_dim = t_emb_dim,
-                context_dim = context_dim
+                context_dim = context_dim,
+                cross_att_num_heads = cross_att_num_heads
             )
             for i in range(num_layers)
         ])
@@ -230,7 +239,8 @@ class MidBlock(nn.Module):
             stride = 1,
             padding = 1,
             t_emb_dim=t_emb_dim,
-            context_dim=context_dim
+            context_dim=context_dim,
+            cross_att_num_heads = cross_att_num_heads
         )
 
     def forward(self,
@@ -257,6 +267,7 @@ class UpSampleBlock(nn.Module):
         num_heads : int | None = None,
         t_emb_dim : int | None = None,
         context_dim : int | None = None,
+        cross_att_num_heads : int | None = None,
         expects_down : bool = False,
     ) -> None:
         
@@ -271,6 +282,7 @@ class UpSampleBlock(nn.Module):
         self.t_emb_dim = t_emb_dim
         self.expects_down = expects_down
         self.context_dim = context_dim
+        self.cross_att_num_heads = cross_att_num_heads
 
         self.layers = nn.Sequential(*[
             ResBlock(
@@ -282,7 +294,8 @@ class UpSampleBlock(nn.Module):
                 padding = 1,
                 t_emb_dim = t_emb_dim,
                 num_heads = num_heads,
-                context_dim = context_dim
+                context_dim = context_dim,
+                cross_att_num_heads = cross_att_num_heads
             )
             for i in range(num_layers)
         ])
@@ -337,13 +350,13 @@ class CategoricalFeaturesEncoder(nn.Module):
             for name,(num_classes,dim) in config.items()
         })
 
-        self.dnn = nn.Sequential(
+        self.dnn = nn.Sequential(*[
             nn.Sequential(
                 nn.Linear(self.fc_in if i == 0 else self.fc_out,self.fc_out),
                 nn.ReLU() if i != num_layers - 1 else nn.Identity()
             )
             for i in range(self.num_layers)
-        )
+        ])
 
     def forward(self, x : dict[str,Tensor]) -> Tensor:
 
@@ -354,8 +367,8 @@ class CategoricalFeaturesEncoder(nn.Module):
             if self.dropout > 0.0 and self.training:
 
                 num_classes = self.config[name][0]
-                mask = torch.rand(values.shape) < self.dropout
-                values = torch.where(mask,torch.zeros_like(values).fill_(num_classes),values)
+                mask = torch.rand(values.shape, device=values.device) < self.dropout
+                values = torch.where(mask,torch.zeros_like(values, device=values.device).fill_(num_classes).long(),values)
             
             embedding = self.embeddings[name](values)
 
@@ -365,4 +378,4 @@ class CategoricalFeaturesEncoder(nn.Module):
         y = self.dnn(y)
         y = y.view(y.shape[0],-1,self.dim)
 
-        return x
+        return y

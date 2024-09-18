@@ -16,6 +16,7 @@ class UNetConfig:
     t_emb_dim : int = 512
     context_dim : Optional[int] = None
     output_activation : Literal['sigmoid','tanh','linear'] = 'linear'
+    cross_att_num_heads : Optional[int] = None
 
 class UNet(nn.Module):
 
@@ -49,7 +50,8 @@ class UNet(nn.Module):
                 norm_channels = config.norm_channels,
                 num_heads = config.num_heads,
                 t_emb_dim = config.t_emb_dim,
-                context_dim = config.context_dim
+                context_dim = config.context_dim,
+                cross_att_num_heads = config.cross_att_num_heads
             )
             for i in range(len(config.down_channels)-1)
         ])
@@ -62,7 +64,8 @@ class UNet(nn.Module):
                 norm_channels = config.norm_channels,
                 num_heads = config.num_heads,
                 t_emb_dim = config.t_emb_dim,
-                context_dim = config.context_dim
+                context_dim = config.context_dim,
+                cross_att_num_heads = config.cross_att_num_heads
             )
             for i in range(len(config.mid_channels)-1)
         ])
@@ -77,7 +80,8 @@ class UNet(nn.Module):
                 num_heads = config.num_heads,
                 t_emb_dim = config.t_emb_dim,
                 expects_down=True,
-                context_dim = config.context_dim
+                context_dim = config.context_dim,
+                cross_att_num_heads = config.cross_att_num_heads
             )
             for i in reversed(range(len(config.down_channels) - 1))
         ])
