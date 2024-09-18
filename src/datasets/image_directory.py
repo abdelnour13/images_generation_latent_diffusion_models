@@ -33,6 +33,8 @@ class ImageDirectory(Dataset):
                 raise ValueError("Metadata file not found")
             else:
                 self.metadata = pd.read_csv(self.dataset.metadata_file)
+        else:
+            self.metadata = None
 
         self._verify()
 
