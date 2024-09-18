@@ -7,5 +7,6 @@ from .helpers import (
     get_last_checkpoint,
     make_grid,
     save_json,
-    get_palette
+    get_palette,
+    move_data_to_device
 )

@@ -1,0 +1,92 @@
+{
+    "seed": 42,
+    "device": "cuda",
+    "model_config": {
+        "vqvae": {
+            "in_channels": 3,
+            "down_channels": [
+                32,
+                64,
+                64,
+                128
+            ],
+            "mid_channels": [
+                128,
+                128
+            ],
+            "num_layers": 2,
+            "norm_channels": 32,
+            "z_dim": 3,
+            "codebook_size": 4096,
+            "num_heads": 4,
+            "output_activation": "tanh"
+        },
+        "unet": {
+            "in_channels": 3,
+            "out_channels": 32,
+            "down_channels": [
+                128,
+                192,
+                256,
+                384
+            ],
+            "mid_channels": [
+                384,
+                256
+            ],
+            "num_layers": 2,
+            "norm_channels": 32,
+            "num_heads": 8,
+            "t_emb_dim": 512,
+            "output_activation": "linear",
+            "context_dim" : 16
+        },
+        "noise_scheduler": {
+            "timesteps": 1000,
+            "beta_start": 0.0015,
+            "beta_end": 0.0195
+        },
+        "input_type": "latent",
+        "metadata_cond" : {
+            "config" : {
+                "eye_angle": [3, 1],
+                "eye_lashes": [2, 1],
+                "eye_lid": [2, 1],
+                "chin_length": [3, 1],
+                "eyebrow_weight": [2, 1],
+                "eyebrow_shape": [14, 4],
+                "eyebrow_thickness": [4, 2],
+                "face_shape": [7, 3],
+                "facial_hair": [15, 5],
+                "hair": [111, 16],
+                "eye_color": [5, 2],
+                "face_color": [11, 4],
+                "hair_color": [10, 3],
+                "glasses": [12, 4],
+                "glasses_color": [7, 3],
+                "eye_slant": [3, 1],
+                "eyebrow_width": [3, 1],
+                "eye_eyebrow_distance": [3, 1]
+            },
+            "num_layers" : 4,
+            "dropout" : 0.1
+        },
+        "mask_condition_rate" : 0.1
+    },
+    "vqvae_exp": "vqvae_cartoon",
+    "batch_size": 32,
+    "learning_rate": 0.0001,
+    "total_epochs": 10,
+    "timesteps": 1000,
+    "beta_start": 0.0015,
+    "beta_end": 0.0195,
+    "num_workers": 4,
+    "prefetch_factor": 2,
+    "dataset": "cartoon_faces",
+    "grid_size": 4,
+    "save_image_every": 2500,
+    "noise_size": [
+        16,
+        16
+    ]
+}

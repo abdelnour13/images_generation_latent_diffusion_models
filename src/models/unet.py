@@ -1,8 +1,8 @@
-import torch
 from torch import nn, Tensor
 from .layers import DownSampleBlock, MidBlock, UpSampleBlock, TimeEmbedding
 from typing import Literal
 from dataclasses import dataclass, field
+from typing import Optional
 
 @dataclass
 class UNetConfig:
@@ -14,6 +14,7 @@ class UNetConfig:
     norm_channels : int = 32
     num_heads : int = 8
     t_emb_dim : int = 512
+    context_dim : Optional[int] = None
     output_activation : Literal['sigmoid','tanh','linear'] = 'linear'
 
 class UNet(nn.Module):
@@ -48,6 +49,7 @@ class UNet(nn.Module):
                 norm_channels = config.norm_channels,
                 num_heads = config.num_heads,
                 t_emb_dim = config.t_emb_dim,
+                context_dim = config.context_dim
             )
             for i in range(len(config.down_channels)-1)
         ])
@@ -60,6 +62,7 @@ class UNet(nn.Module):
                 norm_channels = config.norm_channels,
                 num_heads = config.num_heads,
                 t_emb_dim = config.t_emb_dim,
+                context_dim = config.context_dim
             )
             for i in range(len(config.mid_channels)-1)
         ])
@@ -73,7 +76,8 @@ class UNet(nn.Module):
                 norm_channels = config.norm_channels,
                 num_heads = config.num_heads,
                 t_emb_dim = config.t_emb_dim,
-                expects_down=True
+                expects_down=True,
+                context_dim = config.context_dim
             )
             for i in reversed(range(len(config.down_channels) - 1))
         ])
@@ -82,7 +86,11 @@ class UNet(nn.Module):
         self.silu = nn.SiLU()
         self.conv_out = nn.Conv2d(in_channels=config.out_channels,out_channels=config.in_channels,kernel_size=3,padding=1)
 
-    def forward(self, x : Tensor, t : Tensor) -> Tensor:
+    def forward(self, 
+        x : Tensor, 
+        t : Tensor,
+        condition : Optional[Tensor] = None
+    ) -> Tensor:
 
         x = self.conv_in(x)
 
@@ -93,13 +101,13 @@ class UNet(nn.Module):
 
         for block in self.down_blocks:
             downs.append(x)
-            x = block(x,t)
+            x = block(x,t,condition)
 
         for block in self.mid_blocks:
-            x = block(x,t)
+            x = block(x,t,condition)
 
         for block in self.up_blocks:
-            x = block(x,t,downs.pop())
+            x = block(x,t,downs.pop(),condition)
 
         x = self.norm_out(x)
         x = self.silu(x)

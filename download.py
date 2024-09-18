@@ -90,6 +90,8 @@ def dowbload_cartoon_faces():
 
     attributes_df = pd.read_csv(os.path.join(dataset_path, 'cartoon_image_attributes.csv'))
     attributes_df['filename'] = attributes_df['filename'].apply(lambda x: x.split('/')[-1])
+    attributes_df['image_id'] = attributes_df['filename']
+    attributes_df['filename'].drop(columns=['filename'])
     attributes_df.to_csv(os.path.join(dataset_path, 'cartoon_image_attributes.csv'), index=False)
 
 def main(args : Args):

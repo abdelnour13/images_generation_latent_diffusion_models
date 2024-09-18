@@ -8,11 +8,27 @@ import json
 from torch import Tensor
 from tqdm.auto import tqdm
 from PIL import Image
-from typing import Optional
+from typing import Optional,Any
 from imagesize import get
 from collections import OrderedDict
 from torch.nn import functional as F
 from my_palette import PaletteCreation
+
+def move_data_to_device(data : Any, device : str | torch.device) -> Any:
+
+    if isinstance(data, Tensor):
+        return data.to(device)
+    
+    if isinstance(data, dict):
+        return {key: move_data_to_device(value, device) for key, value in data.items()}
+    
+    if isinstance(data, list):
+        return [move_data_to_device(value, device) for value in data]
+    
+    if isinstance(data, tuple):
+        return tuple(move_data_to_device(value, device) for value in data)
+    
+    raise ValueError(f"Data type {type(data)} not supported")
 
 def hex_to_rgb(hex : str) -> tuple[int, int, int]:
 

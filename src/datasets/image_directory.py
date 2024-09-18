@@ -5,9 +5,8 @@ import numpy as np
 sys.path.append('../..')
 from torch.utils.data import Dataset
 from definitions import DATASETS
-from typing import Optional,Callable
+from typing import Optional,Callable,Literal
 from PIL import Image
-from src.utils import get_palette
 
 class ImageDirectory(Dataset):
 
@@ -15,31 +14,41 @@ class ImageDirectory(Dataset):
         dataset : str,
         split : Optional[str] = None,
         transform : Optional[Callable] = None,
-        color_palette_size : int = 5
+        type : Literal['image','latent'] = 'image',
+        return_metadata : bool = False
     ) -> None:
         
         super().__init__()
 
-        self.dataset = dataset
+        self.dataset = DATASETS[dataset]
         self.split = split
         self.transform = transform
-        self.color_palette_size = color_palette_size
+        self.type = type
+        self.latents_dir = os.path.join(self.dataset.root, 'features')
+        self.return_metadata = return_metadata
+
+        if self.return_metadata:
+
+            if self.dataset.metadata_file is None:
+                raise ValueError("Metadata file not found")
+            else:
+                self.metadata = pd.read_csv(self.dataset.metadata_file)
 
         self._verify()
 
-        self.splits_df = pd.read_csv(DATASETS[dataset].splits_file)
+        self.splits_df = pd.read_csv(self.dataset.splits_file)
 
         if split is not None:
             splits = ['train', 'val', 'test']
             self.splits_df = self.splits_df[self.splits_df['partition'] == splits.index(split)]
 
     def _verify(self) -> None:
-
-        if self.dataset not in DATASETS:
-            raise ValueError(f"Dataset {self.dataset} not available")
         
         if self.split is not None and self.split not in ['train', 'val', 'test']:
             raise ValueError(f"Split must be one of ['train', 'val', 'test']")
+        
+        if self.type == 'latent' and not os.path.exists(self.latents_dir):
+            raise FileNotFoundError(f"Latents directory not found at {self.latents_dir}")
         
     def __len__(self) -> int:
         return len(self.splits_df)
@@ -49,15 +58,24 @@ class ImageDirectory(Dataset):
         row = self.splits_df.iloc[idx]
 
         image_id = row['image_id']
-        image_path = os.path.join(DATASETS[self.dataset].images_dir, image_id)
 
-        image = Image.open(image_path).convert('RGB')
-        # palette = get_palette(np.array(image).reshape(-1,3), self.color_palette_size) / 255.0
+        if self.type == 'latent':
+            image_path = os.path.join(self.dataset.images_dir, image_id)
+            image = Image.open(image_path).convert('RGB')
+        else:
+            latent_path = os.path.join(self.latents_dir, f'{os.path.splitext(image_id)[0]}.npy')
+            image = np.load(latent_path)
 
         if self.transform is not None:
             image = self.transform(image)
 
-        return {
+        data = {
             'id' : idx,
-            'image' : image,
+            'data' : image,
         }
+
+        if self.metadata is not None:
+            metadata = self.metadata[self.metadata['image_id'] == image_id].iloc[0]
+            data['metadata'] = metadata.drop('image_id').to_dict()
+
+        return data

@@ -10,9 +10,9 @@ from argparse import ArgumentParser
 import imageio
 sys.path.append('../..')
 import definitions as D
-from src.utils import seed_everything, load_json, make_grid, get_last_checkpoint
+from src.utils import seed_everything, load_json, make_grid, get_last_checkpoint, move_data_to_device
 from dataclasses import dataclass, field
-from src.datasets import ImageDirectory,NumpyDirectory
+from src.datasets import ImageDirectory
 from torch.utils.data import DataLoader
 from torchvision.transforms import v2 as T
 from src.models import LatentDiffusion,LatentDiffusionConfig
@@ -61,24 +61,31 @@ class Config:
 class Args:
     experiment : str
 
-def create_dataset(config: Config,split : str) -> ImageDirectory:
+def create_transforms(config: Config) -> T.Compose:
 
     if config.model_config.input_type == 'image':
-        dataset = ImageDirectory(
-            dataset = config.dataset,
-            transform = T.Compose([
-                T.ToImage(),
-                T.ToDtype(dtype=torch.float32,scale=True),
-                T.Normalize(mean=[0.5,0.5,0.5],std=[0.5,0.5,0.5]),
-            ]),
-            split = split,
-        )
+
+        return T.Compose([
+            T.ToImage(),
+            T.ToDtype(dtype=torch.float32,scale=True),
+            T.Normalize(mean=[0.5,0.5,0.5],std=[0.5,0.5,0.5]),
+        ])
+    
     else:
-        dataset = NumpyDirectory(
-            root = os.path.join(D.DATASETS[config.dataset].root, "features"),
-            transform = T.ToDtype(dtype=torch.float32,scale=False),
-            split = split,
-        )
+        
+        return T.Compose([
+            T.ToDtype(dtype=torch.float32,scale=False),
+        ])
+
+def create_dataset(config: Config,split : str) -> ImageDirectory:
+
+    dataset = ImageDirectory(
+        dataset = config.dataset,
+        transform = create_transforms(config),
+        split = split,
+        type=config.model_config.input_type,
+        return_metadata=(config.model_config.metadata_cond is not None),
+    )
 
     return dataset
 
@@ -162,8 +169,6 @@ def train(
     images = []
 
     model = model.to(config.device)
-
-    data_key = config.model_config.input_type
     
     for epoch in range(config.total_epochs):
 
@@ -189,12 +194,12 @@ def train(
                     optimizer.zero_grad()
 
                 ### *** Move data to device *** ###
-                data[data_key] = data[data_key].to(config.device)
+                data = move_data_to_device(data,config.device)
 
                 with torch.set_grad_enabled(training):
                     
                     ### *** Forward pass *** ###
-                    y_hat,y,t = model.forward(data[data_key])
+                    y_hat,y,t = model.forward(data['data'],data.get('metadata',None))
 
                     ### *** Calculate loss *** ###
                     loss = loss_fn(y_hat,y)

@@ -1,5 +1,6 @@
 import torch
 from torch import nn,Tensor
+from torch.nn import functional as F
 
 class TimeEmbedding(nn.Module):
 
@@ -141,6 +142,7 @@ class DownSampleBlock(nn.Module):
         norm_channels : int,
         num_heads : int | None = None,
         t_emb_dim : int | None = None,
+        context_dim : int | None = None,
     ) -> None:
         
         super().__init__()
@@ -152,6 +154,7 @@ class DownSampleBlock(nn.Module):
         self.norm_channels = norm_channels
         self.num_heads = num_heads
         self.t_emb_dim = t_emb_dim
+        self.context_dim = context_dim
 
         self.layers = nn.Sequential(*[
             ResBlock(
@@ -162,7 +165,8 @@ class DownSampleBlock(nn.Module):
                 stride = 1,
                 padding = 1,
                 t_emb_dim = t_emb_dim,
-                num_heads = num_heads
+                num_heads = num_heads,
+                context_dim = context_dim
             )
             for i in range(num_layers)
         ])
@@ -191,6 +195,7 @@ class MidBlock(nn.Module):
         norm_channels : int,
         num_heads : int | None = None,
         t_emb_dim : int | None = None,
+        context_dim : int | None = None,
     ) -> None:
         super().__init__()
 
@@ -200,6 +205,7 @@ class MidBlock(nn.Module):
         self.norm_channels = norm_channels
         self.num_heads = num_heads
         self.t_emb_dim = t_emb_dim
+        self.context_dim = context_dim
 
         self.layers = nn.Sequential(*[
             ResBlock(
@@ -210,7 +216,8 @@ class MidBlock(nn.Module):
                 stride = 1,
                 padding = 1,
                 num_heads = num_heads,
-                t_emb_dim = t_emb_dim
+                t_emb_dim = t_emb_dim,
+                context_dim = context_dim
             )
             for i in range(num_layers)
         ])
@@ -223,6 +230,7 @@ class MidBlock(nn.Module):
             stride = 1,
             padding = 1,
             t_emb_dim=t_emb_dim,
+            context_dim=context_dim
         )
 
     def forward(self,
@@ -248,6 +256,7 @@ class UpSampleBlock(nn.Module):
         norm_channels : int,
         num_heads : int | None = None,
         t_emb_dim : int | None = None,
+        context_dim : int | None = None,
         expects_down : bool = False,
     ) -> None:
         
@@ -261,6 +270,7 @@ class UpSampleBlock(nn.Module):
         self.num_heads = num_heads
         self.t_emb_dim = t_emb_dim
         self.expects_down = expects_down
+        self.context_dim = context_dim
 
         self.layers = nn.Sequential(*[
             ResBlock(
@@ -271,7 +281,8 @@ class UpSampleBlock(nn.Module):
                 stride = 1,
                 padding = 1,
                 t_emb_dim = t_emb_dim,
-                num_heads = num_heads
+                num_heads = num_heads,
+                context_dim = context_dim
             )
             for i in range(num_layers)
         ])
@@ -301,5 +312,57 @@ class UpSampleBlock(nn.Module):
 
         for layer in self.layers:
             x = layer((x,t,context))
+
+        return x
+    
+class CategoricalFeaturesEncoder(nn.Module):
+
+    def __init__(self, 
+        config : dict[str,tuple[int,int]],
+        dim : int,
+        num_layers : int,
+        dropout : float = 0.0
+    ) -> None:
+        super().__init__()
+
+        self.config = config
+        self.dim = dim
+        self.num_layers = num_layers
+        self.fc_in = sum([dim for _,dim in config.values()])
+        self.fc_out = len(config) * dim
+        self.dropout = dropout
+
+        self.embeddings = nn.ModuleDict({
+            name : nn.Embedding(num_classes+1,dim)
+            for name,(num_classes,dim) in config.items()
+        })
+
+        self.dnn = nn.Sequential(
+            nn.Sequential(
+                nn.Linear(self.fc_in if i == 0 else self.fc_out,self.fc_out),
+                nn.ReLU() if i != num_layers - 1 else nn.Identity()
+            )
+            for i in range(self.num_layers)
+        )
+
+    def forward(self, x : dict[str,Tensor]) -> Tensor:
+
+        y = []
+
+        for name,values in x.items():
+            
+            if self.dropout > 0.0 and self.training:
+
+                num_classes = self.config[name][0]
+                mask = torch.rand(values.shape) < self.dropout
+                values = torch.where(mask,torch.zeros_like(values).fill_(num_classes),values)
+            
+            embedding = self.embeddings[name](values)
+
+            y.append(embedding)
+
+        y = torch.cat(y,dim=-1)
+        y = self.dnn(y)
+        y = y.view(y.shape[0],-1,self.dim)
 
         return x

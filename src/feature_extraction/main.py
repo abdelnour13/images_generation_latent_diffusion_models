@@ -23,7 +23,7 @@ class Args:
 
 def feature_extract(
     model : VQVAE,
-    loaders : dict[str,DataLoader],
+    loaders : list[DataLoader],
     device : torch.device,
     save_dir : str
 ) -> None:
@@ -33,9 +33,7 @@ def feature_extract(
 
     with torch.inference_mode():
 
-        for split,loader in loaders.items():
-
-            os.makedirs(os.path.join(save_dir,split),exist_ok=True)
+        for loader in loaders:
 
             for data in tqdm(loader):
 
@@ -51,7 +49,7 @@ def feature_extract(
                     idx = idx.long().item()
                     image_id = loader.dataset.splits_df.iloc[idx]['image_id']
                     image_id = os.path.splitext(image_id)[0]
-                    np.save(os.path.join(save_dir,split,f'{image_id}.npy'),latent)
+                    np.save(os.path.join(save_dir,f'{image_id}.npy'),latent)
 
 def main(args: Args):
     
@@ -90,11 +88,7 @@ def main(args: Args):
 
     feature_extract(
         model=vqvae,
-        loaders={
-            'train': loaders[0],
-            'val': loaders[1],
-            'test': loaders[2]
-        },
+        loaders=loaders,
         device=config.device,
         save_dir=save_dir
     )
