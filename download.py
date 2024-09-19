@@ -51,6 +51,47 @@ def download_anime_faces():
 
     df.to_csv(os.path.join(dataset_path, 'splits.csv'), index=False)
 
+def download_anime_faces_2():
+
+    dataset_path = os.path.join(DATA_DIR, 'anime_faces_2')
+    os.makedirs(dataset_path, exist_ok=True)
+
+    api.dataset_download_cli('modassirafzal/anime-faces', path=dataset_path, unzip=True)
+
+    images_dir = os.path.join(dataset_path, 'images')
+    images = os.listdir(images_dir)
+
+    df = pd.DataFrame(columns=['image_id','partition'])
+
+    train_images, val_images = train_test_split(images, test_size=0.1, random_state=seed)
+    train_images, _ = train_test_split(train_images, test_size=0.1, random_state=seed)
+
+    df['image_id'] = images
+    df['partition'] = df['image_id'].apply(lambda x: 0 if x in train_images else 1 if x in val_images else 2)
+
+    df.to_csv(os.path.join(dataset_path, 'splits.csv'), index=False)
+
+def download_art_pictograms():
+
+    # kaggle datasets download -d olgabelitskaya/art-pictogram
+    dataset_path = os.path.join(DATA_DIR, 'art_pictograms')
+    os.makedirs(dataset_path, exist_ok=True)
+
+    api.dataset_download_cli('olgabelitskaya/art-pictogram', path=dataset_path, unzip=True)
+
+    images_dir = os.path.join(dataset_path, 'pictograms')
+    images = os.listdir(images_dir)
+
+    df = pd.DataFrame(columns=['image_id','partition'])
+
+    train_images, val_images = train_test_split(images, test_size=0.1, random_state=seed)
+    train_images, _ = train_test_split(train_images, test_size=0.1, random_state=seed)
+
+    df['image_id'] = images
+    df['partition'] = df['image_id'].apply(lambda x: 0 if x in train_images else 1 if x in val_images else 2)
+
+    df.to_csv(os.path.join(dataset_path, 'splits.csv'), index=False)
+
 def dowbload_cartoon_faces():
 
     dataset_path = os.path.join(DATA_DIR, 'cartoon_faces')
@@ -94,12 +135,35 @@ def dowbload_cartoon_faces():
     attributes_df['filename'].drop(columns=['filename'])
     attributes_df.to_csv(os.path.join(dataset_path, 'cartoon_image_attributes.csv'), index=False)
 
+def download_bitmojie():
+
+    dataset_path = os.path.join(DATA_DIR, 'bitmojie')
+    os.makedirs(dataset_path, exist_ok=True)
+
+    # api.dataset_download_cli('romaingraux/bitmojis', path=dataset_path, unzip=True)
+
+    images_dir = os.path.join(dataset_path, 'bitmojis')
+    images = os.listdir(images_dir)
+
+    df = pd.DataFrame(columns=['image_id','partition'])
+
+    train_images, val_images = train_test_split(images, test_size=0.1, random_state=seed)
+    train_images, test_images = train_test_split(train_images, test_size=0.1, random_state=seed)
+
+    df['image_id'] = images
+    df['partition'] = df['image_id'].apply(lambda x: 1 if x in val_images else 2 if x in test_images else 0)
+
+    df.to_csv(os.path.join(dataset_path, 'splits.csv'), index=False)
+
 def main(args : Args):
     
     datasets = {
         'celeba': download_celeba,
         'anime_faces': download_anime_faces,
-        'cartoon_faces': dowbload_cartoon_faces
+        'cartoon_faces': dowbload_cartoon_faces,
+        'anime_faces_2': download_anime_faces_2,
+        'art_pictograms': download_art_pictograms,
+        'bitmojie': download_bitmojie
     }
 
     for dataset in args.datasets:

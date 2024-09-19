@@ -32,4 +32,19 @@ DATASETS = {
         metadata_file = os.path.join(DATA_DIR, 'cartoon_faces', 'cartoon_image_attributes.csv'),
         variants_file = os.path.join(DATA_DIR, 'cartoon_faces', 'cartoon_attributes_variants.csv'),
     ),
+    "anime_faces_2" : DatasetConfig(
+        root = os.path.join(DATA_DIR, 'anime_faces_2'),
+        images_dir = os.path.join(DATA_DIR, 'anime_faces_2', 'images'),
+        splits_file = os.path.join(DATA_DIR, 'anime_faces_2', 'splits.csv')
+    ),
+    'art_pictograms' : DatasetConfig(
+        root = os.path.join(DATA_DIR, 'art_pictograms'),
+        images_dir = os.path.join(DATA_DIR, 'art_pictograms', 'pictograms'),
+        splits_file = os.path.join(DATA_DIR, 'art_pictograms', 'splits.csv')
+    ),
+    'bitmojie' : DatasetConfig(
+        root = os.path.join(DATA_DIR, 'bitmojie'),
+        images_dir = os.path.join(DATA_DIR, 'bitmojie', 'bitmojis'),
+        splits_file = os.path.join(DATA_DIR, 'bitmojie', 'splits.csv')
+    ),
 }
