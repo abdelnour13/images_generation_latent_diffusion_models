@@ -38,10 +38,10 @@ def feature_extract(
             for data in tqdm(loader):
 
                 # Move data to device
-                data['image'] = data['image'].to(device)
+                data['data'] = data['data'].to(device)
 
                 # Forward pass
-                enc_out = model.encoder(data['image'])
+                enc_out = model.encoder(data['data'])
                 quant_out = model.quantize(enc_out)
                 latents = quant_out['quant_out'].detach().cpu().numpy()
 

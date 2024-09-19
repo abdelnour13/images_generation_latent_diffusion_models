@@ -140,7 +140,7 @@ def create_model(config: Config) -> LatentDiffusion:
 
     checkpoints_dir = os.path.join(D.EXPERIMENTS_DIR,config.vqvae_exp,'checkpoints')
     checkpoint = get_last_checkpoint(checkpoints_dir)['vqvae']
-    model.vqvae.load_state_dict(checkpoint,strict=False)
+    msg = model.vqvae.load_state_dict(checkpoint,strict=False)
     
     return model
 
