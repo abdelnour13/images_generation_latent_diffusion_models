@@ -1,0 +1,65 @@
+{
+    "seed": 42,
+    "device": "cuda",
+    "vqvae_args": {
+        "in_channels": 3,
+        "down_channels": [
+            32,
+            64,
+            64,
+            128
+        ],
+        "mid_channels": [
+            128,
+            128
+        ],
+        "num_layers": 2,
+        "norm_channels": 32,
+        "z_dim": 3,
+        "codebook_size": 2048,
+        "num_heads": 4,
+        "output_activation": "tanh"
+    },
+    "discriminator_args": {
+        "channels": [
+            3,
+            64,
+            128,
+            256
+        ],
+        "filters": [
+            4,
+            4,
+            4,
+            4
+        ],
+        "strides": [
+            2,
+            2,
+            2,
+            1
+        ],
+        "paddings": [
+            1,
+            1,
+            1,
+            1
+        ]
+    },
+    "lpips_net": "squeeze",
+    "batch_size": 16,
+    "learning_rate": 0.0001,
+    "total_epochs": 10,
+    "disc_start_iter": 8000,
+    "percptual_loss_weight": 1.0,
+    "commitment_loss_weight": 1.0,
+    "codebook_loss_weight": 0.2,
+    "adversarial_loss_weight": 0.5,
+    "discriminator_loss": "bce",
+    "image_size": [128,128],
+    "num_workers": 4,
+    "prefetch_factor": 2,
+    "save_image_every": 500,
+    "grid_size": 4,
+    "dataset": "bitmojie"
+}

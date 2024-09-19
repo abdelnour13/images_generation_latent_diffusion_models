@@ -223,7 +223,7 @@ def train(
     example_images = []
 
     for i in range(config.grid_size ** 2):
-        example_images.append(val_loader.dataset[i]['image'].unsqueeze(0))
+        example_images.append(val_loader.dataset[i]['data'].unsqueeze(0))
 
     example_images = torch.cat(example_images,dim=0).to(config.device)
                 
@@ -253,7 +253,7 @@ def train(
                 for i,data in iterator:
 
                     # Move data to device
-                    data['image'] = data['image'].to(config.device)
+                    data['data'] = data['data'].to(config.device)
                         
                     ############################
                     # Discriminator Training
@@ -271,7 +271,7 @@ def train(
                             discriminator.zero_grad()
 
                         # Forward pass
-                        output = discriminator(data['image'])
+                        output = discriminator(data['data'])
 
                         # Calculate loss
                         label = torch.ones_like(output)
@@ -284,7 +284,7 @@ def train(
                     ### *** Phase 02 : train with fake data *** ###
 
                     # Generate fake data
-                    vqvae_out = vqvae(data['image'])
+                    vqvae_out = vqvae(data['data'])
 
                     if iteration_count >= config.disc_start_iter:
                         # Forward pass
@@ -324,10 +324,10 @@ def train(
                         adv_loss = d_loss(output,label)
 
                     # Calculate the LPIPS loss
-                    lpips_loss = lpip_net(vqvae_out['dec_out'],data['image']).mean()
+                    lpips_loss = lpip_net(vqvae_out['dec_out'],data['data']).mean()
 
                     # Calculate reconstruction loss
-                    reconstruction_loss = rec_loss(vqvae_out['dec_out'],data['image'])
+                    reconstruction_loss = rec_loss(vqvae_out['dec_out'],data['data'])
 
                     # Calculate the loss
                     vqvae_loss = (
