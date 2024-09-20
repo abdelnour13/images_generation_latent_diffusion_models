@@ -5,7 +5,7 @@ This repository contains the code for generating images with the Latent Diffusio
 
 For all the datasets the models were trained to generate images unconditionally,additionally for [Anime Faces dataset](https://www.kaggle.com/datasets/soumikrakshit/anime-faces) the model was trained to generate an image from a binary mask as well ([Results](https://github.com/abdelnour13/images_generation_latent_diffusion_models/blob/main/notebooks/anime_faces/diffusion_cond.ipynb)),and for the [Google cartoon faces dataset](https://www.kaggle.com/datasets/brendanartley/cartoon-faces-googles-cartoon-set) a model to generate images from categorical attributes was also trained ([Results](https://github.com/abdelnour13/images_generation_latent_diffusion_models/blob/main/notebooks/cartoon_faces/diffusion_cond.ipynb)) while for the [Bitmoji faces dataset](https://www.kaggle.com/datasets/romaingraux/bitmojis) i experimented with generating images from a color palette ([Results](https://github.com/abdelnour13/images_generation_latent_diffusion_models/blob/main/notebooks/bitmoji/diffusion_cond.ipynb)).
 
-## VQVAE Training results On Google's cartoon dataset
+## VQVAE Training results (Google's cartoon dataset)
 
 - VQVAE Output during training
 
@@ -16,7 +16,7 @@ For all the datasets the models were trained to generate images unconditionally,
 <img src="experiments/vqvae_cartoon/images.png" />
 
 
-## Latent diffusion model results
+## Latent diffusion model results (Google's cartoon dataset)
 
 - Latent diffusion output during training (every 2000 iterations)
 
