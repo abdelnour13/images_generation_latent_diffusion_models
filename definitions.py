@@ -1,5 +1,6 @@
 import os
 from dataclasses import dataclass
+from typing import Optional
 
 ROOT_DIR = os.path.dirname(os.path.abspath(__file__))
 
@@ -11,8 +12,8 @@ class DatasetConfig:
     root : str
     images_dir: str
     splits_file: str
-    metadata_file: str | None = None
-    variants_file: str | None = None
+    metadata_file: Optional[str] = None
+    variants_file: Optional[str] = None
 
 DATASETS = {
     "celeb_a" : DatasetConfig(

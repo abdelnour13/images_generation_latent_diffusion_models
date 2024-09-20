@@ -73,7 +73,6 @@ def download_anime_faces_2():
 
 def download_art_pictograms():
 
-    # kaggle datasets download -d olgabelitskaya/art-pictogram
     dataset_path = os.path.join(DATA_DIR, 'art_pictograms')
     os.makedirs(dataset_path, exist_ok=True)
 
@@ -97,7 +96,6 @@ def dowbload_cartoon_faces():
     dataset_path = os.path.join(DATA_DIR, 'cartoon_faces')
     os.makedirs(dataset_path, exist_ok=True)
 
-    ### Images
     api.dataset_download_cli('brendanartley/cartoon-faces-googles-cartoon-set', path=dataset_path, unzip=True)
 
     images_dir = os.path.join(dataset_path, 'cartoonset100k_jpg')
@@ -126,7 +124,6 @@ def dowbload_cartoon_faces():
 
     df.to_csv(os.path.join(dataset_path, 'splits.csv'), index=False)
 
-    ### Annotations
     api.dataset_download_cli('kirkdco/google-cartoon-faces-attributes', path=dataset_path, unzip=True)
 
     attributes_df = pd.read_csv(os.path.join(dataset_path, 'cartoon_image_attributes.csv'))
@@ -155,16 +152,17 @@ def download_bitmojie():
 
     df.to_csv(os.path.join(dataset_path, 'splits.csv'), index=False)
 
+
+datasets = {
+    'celeba': download_celeba,
+    'anime_faces': download_anime_faces,
+    'cartoon_faces': dowbload_cartoon_faces,
+    'anime_faces_2': download_anime_faces_2,
+    'art_pictograms': download_art_pictograms,
+    'bitmojie': download_bitmojie
+}
+
 def main(args : Args):
-    
-    datasets = {
-        'celeba': download_celeba,
-        'anime_faces': download_anime_faces,
-        'cartoon_faces': dowbload_cartoon_faces,
-        'anime_faces_2': download_anime_faces_2,
-        'art_pictograms': download_art_pictograms,
-        'bitmojie': download_bitmojie
-    }
 
     for dataset in args.datasets:
 
@@ -179,7 +177,7 @@ if __name__ == '__main__':
 
     parser = ArgumentParser()
 
-    parser.add_argument('--datasets', nargs='+', default=['celeba', 'anime_faces', 'cartoon_faces'])
+    parser.add_argument('--datasets', nargs='+', default=list(datasets.keys()))
 
     args = parser.parse_args()
 

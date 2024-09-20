@@ -26,7 +26,7 @@ class MaskCondConfig:
 @dataclass
 class ColorPaletteCondConfig:
     dim_in : int = 3
-    dim_out : int = 32
+    dim_out : int = 32 # TODO : Remove this & remove it from config files : dim_out <== context_dim
     condition_mask_rate : float = 0.1
 
 @dataclass
