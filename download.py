@@ -140,7 +140,7 @@ def download_bitmojie():
     dataset_path = os.path.join(DATA_DIR, 'bitmojie')
     os.makedirs(dataset_path, exist_ok=True)
 
-    # api.dataset_download_cli('romaingraux/bitmojis', path=dataset_path, unzip=True)
+    api.dataset_download_cli('romaingraux/bitmojis', path=dataset_path, unzip=True)
 
     images_dir = os.path.join(dataset_path, 'bitmojis')
     images = os.listdir(images_dir)
