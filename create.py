@@ -3,7 +3,6 @@ import os
 from argparse import ArgumentParser
 from src.training.vqvae import Config as VQVAEConfig
 from src.training.diffusion import Config as DiffusionConfig
-from src.training.gan import Config as GANConfig
 from src.utils import save_json
 from dataclasses import asdict,dataclass
 from typing import Literal
@@ -11,7 +10,6 @@ from typing import Literal
 expirements = {
     'vqvae': VQVAEConfig,
     'diffusion': DiffusionConfig,
-    'gan': GANConfig
 }
 
 @dataclass
