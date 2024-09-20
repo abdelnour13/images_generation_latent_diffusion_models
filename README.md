@@ -62,3 +62,13 @@ python3 vqvae.py --experiment EXPERIMENT
 cd src/training
 python3 diffusion.py --experiment EXPERIMENT
 ```
+
+## Acknowledgement : 
+
+- Here i share some youtube videos that helped me in understanding both the theory behined diffusion models as well as key implementation details : 
+
+[Why Does Diffusion Work Better than Auto-Regression?](https://www.youtube.com/watch?v=zc5NTeJbk-k)
+[Vector-Quantized Variational Autoencoders (VQ-VAEs) | Deep Learning](https://www.youtube.com/watch?v=yQvELPjmyn0)
+[Denoising Diffusion Probabilistic Models | DDPM Explained](https://www.youtube.com/watch?v=H45lF4sUgiE&t=1581s)
+[Stable Diffusion from Scratch in PyTorch | Unconditional Latent Diffusion Models](https://www.youtube.com/watch?v=1BkzNb3ejK4)
+[Stable Diffusion from Scratch in PyTorch | Conditional Latent Diffusion Models](https://www.youtube.com/watch?v=hEJjg7VUA8g&t=1178s)
