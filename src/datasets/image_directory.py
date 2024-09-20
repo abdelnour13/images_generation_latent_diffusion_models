@@ -7,6 +7,7 @@ from torch.utils.data import Dataset
 from definitions import DATASETS
 from typing import Optional,Callable,Literal
 from PIL import Image
+from src.utils import load_json
 
 class ImageDirectory(Dataset):
 
@@ -17,7 +18,8 @@ class ImageDirectory(Dataset):
         mask_transform : Optional[Callable] = None,
         type : Literal['image','latent'] = 'image',
         return_metadata : bool = False,
-        return_masks : bool = False
+        return_masks : bool = False,
+        return_color_palette : bool = False,
     ) -> None:
         
         super().__init__()
@@ -31,6 +33,7 @@ class ImageDirectory(Dataset):
         self.masks_dir = os.path.join(self.dataset.root, 'masks')
         self.return_metadata = return_metadata
         self.return_masks = return_masks
+        self.return_color_palette = return_color_palette
 
         if self.return_metadata:
 
@@ -40,6 +43,18 @@ class ImageDirectory(Dataset):
                 self.metadata = pd.read_csv(self.dataset.metadata_file)
         else:
             self.metadata = None
+
+        if self.return_color_palette:
+
+            color_palette_file = os.path.join(self.dataset.root, 'palettes.json')
+
+            if not os.path.exists(color_palette_file):
+                raise FileNotFoundError(f"Color palette file not found at {color_palette_file}")
+
+            self.color_palette = load_json(color_palette_file)
+        else:
+            self.color_palette = None
+
 
         self._verify()
 
@@ -97,5 +112,9 @@ class ImageDirectory(Dataset):
                 mask = self.mask_transform(mask)
 
             data['mask'] = mask
+
+        if self.return_color_palette:
+            data['color_palette'] = np.array(self.color_palette[image_id]) / 255.0
+            data['color_palette'] =  data['color_palette'].astype(np.float32)
 
         return data

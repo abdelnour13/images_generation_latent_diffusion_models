@@ -1,0 +1,76 @@
+{
+    "seed": 42,
+    "device": "cuda",
+    "model_config": {
+        "vqvae" : {
+            "in_channels": 3,
+            "down_channels": [
+                32,
+                64,
+                64,
+                128
+            ],
+            "mid_channels": [
+                128,
+                128
+            ],
+            "num_layers": 2,
+            "norm_channels": 32,
+            "z_dim": 3,
+            "codebook_size": 2048,
+            "num_heads": 4,
+            "output_activation": "tanh"
+        },
+        "unet": {
+            "in_channels": 3,
+            "out_channels": 3,
+            "last_channels": 32,
+            "down_channels": [
+                128,
+                192,
+                256,
+                384
+            ],
+            "mid_channels": [
+                384,
+                256
+            ],
+            "num_layers": 2,
+            "norm_channels": 32,
+            "num_heads": 8,
+            "t_emb_dim": 512,
+            "context_dim": 3,
+            "output_activation": "linear",
+            "cross_att_num_heads": 8
+        },
+        "noise_scheduler": {
+            "timesteps": 1000,
+            "beta_start": 0.0015,
+            "beta_end": 0.0195
+        },
+        "input_type": "latent",
+        "metadata_cond": null,
+        "mask_cond": null,
+        "color_palette_cond" : {
+            "dim_in" : 3,
+            "dim_out" : 3,
+            "condition_mask_rate" : 0.1
+        }
+    },
+    "vqvae_exp": "vqvae_bitmojie",
+    "batch_size": 16,
+    "learning_rate": 0.0001,
+    "total_epochs": 10,
+    "timesteps": 1000,
+    "beta_start": 0.0015,
+    "beta_end": 0.0195,
+    "num_workers": 4,
+    "prefetch_factor": 2,
+    "dataset": "bitmojie",
+    "grid_size": 4,
+    "save_image_every": 2500,
+    "noise_size": [
+        16,
+        16
+    ]
+}

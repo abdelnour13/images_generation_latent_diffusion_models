@@ -91,6 +91,7 @@ def create_dataset(config: Config,split : str) -> ImageDirectory:
             T.ToDtype(dtype=torch.float32,scale=True),
         ]),
         return_masks=(config.model_config.mask_cond is not None),
+        return_color_palette=(config.model_config.color_palette_cond is not None),
     )
 
     return dataset
@@ -209,6 +210,7 @@ def train(
                         x=data['data'],
                         metadata=data.get('metadata',None),
                         mask=data.get('mask',None),
+                        color_palette=data.get('color_palette',None),
                     )
 
                     ### *** Calculate loss *** ###

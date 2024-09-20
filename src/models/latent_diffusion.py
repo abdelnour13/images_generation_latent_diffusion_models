@@ -24,6 +24,12 @@ class MaskCondConfig:
     condition_mask_rate : float = 0.1
 
 @dataclass
+class ColorPaletteCondConfig:
+    dim_in : int = 3
+    dim_out : int = 32
+    condition_mask_rate : float = 0.1
+
+@dataclass
 class LatentDiffusionConfig:
 
     vqvae : VQVAEConfig = field(default_factory=VQVAEConfig)
@@ -33,6 +39,7 @@ class LatentDiffusionConfig:
 
     metadata_cond : Optional[MetadataCondConfig] = None
     mask_cond : Optional[MaskCondConfig] = None
+    color_palette_cond : Optional[ColorPaletteCondConfig] = None
 
     def __post_init__(self):
 
@@ -50,6 +57,9 @@ class LatentDiffusionConfig:
 
         if self.mask_cond is not None and isinstance(self.mask_cond,dict):
             self.mask_cond = MaskCondConfig(**self.mask_cond)
+
+        if self.color_palette_cond is not None and isinstance(self.color_palette_cond,dict):
+            self.color_palette_cond = ColorPaletteCondConfig(**self.color_palette_cond)
 
 class LatentDiffusion(nn.Module):
 
@@ -76,13 +86,19 @@ class LatentDiffusion(nn.Module):
             kernel_size=1,
         ) if config.mask_cond is not None else None
 
+        self.color_palette_cond = nn.Linear(
+            config.color_palette_cond.dim_in,
+            config.color_palette_cond.dim_out
+        ) if config.color_palette_cond is not None else None
+
         if config.input_type == 'latent':
             self.vqvae.encoder = nn.Identity()
 
     def forward(self, 
         x : Tensor,
         metadata : Optional[dict[str,Tensor]] = None,
-        mask : Optional[Tensor] = None
+        mask : Optional[Tensor] = None,
+        color_palette : Optional[Tensor] = None
     ) -> tuple[Tensor,Tensor,Tensor]:
         
         # Get the compressed representation of the input
@@ -121,6 +137,21 @@ class LatentDiffusion(nn.Module):
             mask = self.mask_conv(mask)
             noised_x = torch.cat([noised_x,mask],dim=1)
 
+        # Handle conditioning with color palette
+        if color_palette is not None:
+
+            assert self.color_palette_cond is not None, 'Color Palette Condition Config must be provided'
+
+            if torch.rand(1).item() > self.config.color_palette_cond.condition_mask_rate or not self.training:
+                color_palette = self.color_palette_cond(color_palette)
+            else:
+                color_palette = None
+
+            if metadata is not None:
+                metadata = torch.cat([metadata,color_palette],dim=1)
+            else:
+                metadata = color_palette
+        
         # UNet forward pass
         predicted_noise = self.unet(noised_x,t,metadata)
 
@@ -130,6 +161,7 @@ class LatentDiffusion(nn.Module):
         x : Tensor,
         metadata : Optional[dict[str,Tensor]] = None,
         mask : Optional[Tensor] = None,
+        color_palette : Optional[Tensor] = None,
         *,
         cf_scale : float = 1.0,
         decode_every : Optional[int] = None,
@@ -148,21 +180,24 @@ class LatentDiffusion(nn.Module):
 
             if metadata is not None:
 
-                ### Fill missing keys
-                ### To enable generation
-                ### from partial metadata
                 for key,(num_classes,_) in self.config.metadata_cond.config.items():
                     if key not in metadata:
                         metadata[key] = torch.zeros(x.size(0),dtype=torch.long,device=x.device).fill_(num_classes)
 
                 metadata = self.metadata_cond(metadata)
 
-            # If no maks is provided
-            # use an all zero mask to 
-            # indicate no mask condition
             if mask is None and self.config.mask_cond is not None:
                 dim_in = self.config.mask_cond.mask_dim_in
                 mask = torch.zeros(x.size(0),dim_in,x.size(2),x.size(3),device=x.device)
+
+            if color_palette is not None:
+                    
+                color_palette = self.color_palette_cond(color_palette)
+    
+                if metadata is not None:
+                    metadata = torch.cat([metadata,color_palette],dim=1)
+                else:
+                    metadata = color_palette
 
             iterator = reversed(range(timesteps))
 

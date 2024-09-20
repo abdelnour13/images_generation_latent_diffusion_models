@@ -42,7 +42,7 @@ def main(args : Args):
         image_id = dataset.splits_df.iloc[data['id']].image_id
         palettes[image_id] = palette
 
-    save_json(palettes, palettes_path)
+    save_json(palettes, palettes_path, None)
 
 if __name__ == '__main__':
     

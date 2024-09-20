@@ -140,10 +140,10 @@ def load_json(path : str) -> dict:
     with open(path, 'r') as file:
         return json.load(file)
     
-def save_json(data : dict, path : str) -> None:
+def save_json(data : dict, path : str, indent : Optional[int] = 4) -> None:
     
     with open(path, 'w') as file:
-        json.dump(data, file, indent=4)
+        json.dump(data, file, indent=indent)
 
 def make_grid(
     images : Tensor,

@@ -79,7 +79,7 @@ class ResBlock(nn.Module):
     def forward(self,input : tuple[Tensor,Tensor | None,Tensor | None]) -> Tensor:
         
         x,t,context = input
-        
+                
         residual = x
 
         x = self.gn1(x)
