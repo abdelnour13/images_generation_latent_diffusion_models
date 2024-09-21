@@ -9,7 +9,7 @@ For all the datasets the models were trained to generate images unconditionally,
 
 - VQVAE Output during training
 
-![VQVAE Output during training](experiments/vqvae_cartoon/images.gif)
+<img src="experiments/vqvae_cartoon/images.gif" alt="VQVAE Output during training" />
 
 - Original Vs Reconstructed images
 
@@ -20,11 +20,11 @@ For all the datasets the models were trained to generate images unconditionally,
 
 - Latent diffusion output during training (every 2000 iterations)
 
-![Latent diffusion output during training (every 2000 iterations)](experiments/diffusion_cartoon/images.gif)
+<img src="experiments/diffusion_cartoon/images.gif" alt="Latent diffusion output during training (every 2000 iterations)" />
 
 - Latent diffusion generation process (decoded every 20 timesteps)
 
-![ Latent diffusion generation process (decoded every 20 timesteps)](experiments/diffusion_cartoon/generation_process.gif)
+<img src="experiments/diffusion_cartoon/generation_process.gif" alt="Latent diffusion generation process (decoded every 20 timesteps)" />
 
 ## Setup
 
@@ -61,6 +61,14 @@ python3 vqvae.py --experiment EXPERIMENT
 ```
 cd src/training
 python3 diffusion.py --experiment EXPERIMENT
+```
+
+**Note :**
+
+you can also lunch tensorboard in a seprate terminal window with the command below to visualize the metrics and generated/reconstructed images while the model is training :
+
+```
+tensorboard --logdir=runs
 ```
 
 ## Acknowledgement : 
