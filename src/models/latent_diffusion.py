@@ -2,9 +2,9 @@ import sys
 import torch
 sys.path.append('../..')
 from torch import nn,Tensor
-from src.transforms import NoiseScheduler,NoiseSchedulerConfig
 from dataclasses import dataclass,field
 from typing import Literal,Optional
+from .noise_scheduler import NoiseScheduler,NoiseSchedulerConfig
 from .layers import CategoricalFeaturesEncoder
 from .vqvae import VQVAEConfig,VQVAE
 from .unet import UNetConfig,UNet
@@ -26,7 +26,6 @@ class MaskCondConfig:
 @dataclass
 class ColorPaletteCondConfig:
     dim_in : int = 3
-    dim_out : int = 32 # TODO : Remove this & remove it from config files : dim_out <== context_dim
     condition_mask_rate : float = 0.1
 
 @dataclass
@@ -87,8 +86,8 @@ class LatentDiffusion(nn.Module):
         ) if config.mask_cond is not None else None
 
         self.color_palette_cond = nn.Linear(
-            config.color_palette_cond.dim_in,
-            config.color_palette_cond.dim_out
+            in_features=config.color_palette_cond.dim_in,
+            out_features=config.unet.context_dim
         ) if config.color_palette_cond is not None else None
 
         if config.input_type == 'latent':
