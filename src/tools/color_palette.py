@@ -30,7 +30,7 @@ def main(args : Args):
     ### *** Get color palette *** ###
     for data in tqdm(dataset):
 
-        # Generate mask
+        # Generate color palette
         data['data'] = data['data'].resize((args.resolution, args.resolution))
         img = np.array(data['data'])
         img = img.reshape(-1, 3)

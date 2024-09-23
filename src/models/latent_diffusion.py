@@ -142,14 +142,16 @@ class LatentDiffusion(nn.Module):
             assert self.color_palette_cond is not None, 'Color Palette Condition Config must be provided'
 
             if torch.rand(1).item() > self.config.color_palette_cond.condition_mask_rate or not self.training:
+
                 color_palette = self.color_palette_cond(color_palette)
+
+                if metadata is not None:
+                    metadata = torch.cat([metadata,color_palette],dim=1)
+
             else:
                 color_palette = None
 
-            if metadata is not None:
-                metadata = torch.cat([metadata,color_palette],dim=1)
-            else:
-                metadata = color_palette
+            metadata = color_palette
         
         # UNet forward pass
         predicted_noise = self.unet(noised_x,t,metadata)
@@ -169,7 +171,7 @@ class LatentDiffusion(nn.Module):
     ) -> tuple[Tensor,list[Tensor]]:
 
         assert not self.training, 'Model must be in eval mode to generate samples'
-        assert cf_scale == 1.0 or metadata is not None, 'Metadata must be provided for classifier free guidance'
+        assert cf_scale == 1.0 or (metadata is not None or mask is not None or color_palette is not None), 'Metadata must be provided for classifier free guidance'
         assert mask is None or self.config.mask_cond is not None, 'Mask Condition Config must be provided'
 
         decoded = []
