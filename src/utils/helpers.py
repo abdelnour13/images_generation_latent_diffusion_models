@@ -49,7 +49,7 @@ def get_palette(
 
     return palette
 
-def get_last_checkpoint(checkpoints_dir : str) -> Optional[OrderedDict]:
+def get_last_checkpoint(checkpoints_dir : str,device : str | torch.device | None = None) -> Optional[OrderedDict]:
 
     checkpoints = os.listdir(checkpoints_dir)
     checkpoints = [checkpoint for checkpoint in checkpoints if checkpoint.endswith('.pt') or checkpoint.endswith('.pth')]
@@ -61,9 +61,9 @@ def get_last_checkpoint(checkpoints_dir : str) -> Optional[OrderedDict]:
     last_checkpoint = checkpoints[-1]
     last_checkpoint = os.path.join(checkpoints_dir, last_checkpoint)
 
-    return torch.load(last_checkpoint)
+    return torch.load(last_checkpoint,map_location=device)
 
-def seed_everything(seed : int) -> None:
+def seed_everything(seed : int,use_additional : bool = False) -> None:
 
     random.seed(seed)
     np.random.seed(seed)
@@ -71,6 +71,7 @@ def seed_everything(seed : int) -> None:
     torch.cuda.manual_seed(seed)
     torch.backends.cudnn.deterministic = True
     torch.backends.cudnn.benchmark = False
+
 
 def get_metadata(root : str,filename : Optional[str] = None) -> pd.DataFrame:
 
@@ -160,8 +161,10 @@ def make_grid(
     if w * h < B:
         images = images[:w*h,]
     elif w * h > B:
-        padding = torch.zeros(*rest,w*h - B,C,H,W)
+        padding = torch.ones(*rest,w*h - B,C,H,W) * gap_value
         images = torch.cat([images,padding],dim=-4)
+        B = w * h
+
 
     images = images.reshape(np.prod(rest).astype(int) * B,C,H,W) # (B,C,H,W)
     images = F.pad(images,(gap,gap,gap,gap),value=gap_value)  # (B,C,H,W)

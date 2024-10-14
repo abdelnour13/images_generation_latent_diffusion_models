@@ -166,6 +166,7 @@ class LatentDiffusion(nn.Module):
         *,
         cf_scale : float = 1.0,
         decode_every : Optional[int] = None,
+        decode_type : Literal['noise','latent','raw'] = 'latent',
         progress : bool = True,
         device : Optional[str] = None
     ) -> tuple[Tensor,list[Tensor]]:
@@ -220,7 +221,7 @@ class LatentDiffusion(nn.Module):
 
                 if decode_every is not None and t[0].item() % decode_every == 0:
 
-                    x0 = self.vqvae.decoder(x0)
+                    x0 = self.vqvae.decoder(x0) if decode_type == 'latent' else self.vqvae.decoder(x)
 
                     if device is not None:
                         x0 = x0.to(device)
